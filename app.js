@@ -1,0 +1,451 @@
+/* =====================
+   Minimal Hanzi practice
+   Single-file app for GitHub Pages
+   — Features —
+   • Apple Pencil / touch / mouse drawing
+   • Hint overlay (hold H or toggle)
+   • "Check" compares your ink to a bold glyph mask
+   • Next/Prev through a small built-in deck (editable)
+   • Works completely offline on GH Pages (no build tools)
+===================== */
+
+// --- Character deck (edit/add as you like) ---
+let currentDeckName = "HSK 1";
+let DECK = []; // Start with empty array
+
+// DOM elements (declared after HTML loads)
+const deckSelector = document.getElementById('deckSelector');
+const bigChar = document.getElementById('bigChar');
+const pinyin = document.getElementById('pinyin');
+const meaning = document.getElementById('meaning');
+const btnStroke = document.getElementById('btnStroke');
+const btnHint = document.getElementById('btnHint');
+const btnTheme = document.getElementById('btnTheme');
+const btnUndo = document.getElementById('btnUndo');
+const btnClear = document.getElementById('btnClear');
+const btnPrev = document.getElementById('btnPrev');
+const btnNext = document.getElementById('btnNext');
+const btnShowAll = document.getElementById('btnShowAll');
+const charModal = document.getElementById('charModal');
+const modalClose = document.getElementById('modalClose');
+const charGrid = document.getElementById('charGrid');
+const modalTitle = document.getElementById('modalTitle');
+
+
+// Canvas setup
+const board = document.getElementById('board');
+const bgLayer = document.getElementById('bgLayer'); // grid + (optional) outline
+const drawLayer = document.getElementById('drawLayer'); // user ink only
+let bgCtx, drawCtx;
+let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+// Offscreen mask for scoring
+let maskCanvas = document.createElement('canvas');
+let maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+
+let current = 0; // index in DECK
+let showHint = false; // toggle
+let drawing = false; // drawing state
+let last = null; // last point
+let penWidth = 6; // base width (scaled by pressure)
+let undoStack = [];
+
+// Event listener for HSK data loaded
+window.addEventListener('hskDataLoaded', (event) => {
+    const { level, count, error } = event.detail;
+    console.log(`HSK ${level} loaded: ${count} characters${error ? ' (with errors)' : ''}`);
+
+    // If this is the currently selected level, update the deck
+    if (currentDeckName === `HSK ${level}`) {
+        DECK = CHARACTER_DECKS[currentDeckName] || [];
+        console.log(`Updated DECK for ${currentDeckName}, length:`, DECK.length);
+
+        if (DECK.length > 0) {
+            current = 0;
+            setEntry(current);
+        }
+    }
+
+    // Update the deck selector to show character counts
+    const option = deckSelector.querySelector(`option[value="HSK ${level}"]`);
+    if (option && count > 0) {
+        option.textContent = `HSK ${level} (${count} chars)`;
+    }
+});
+
+// Add deck change handler
+deckSelector.addEventListener('change', async (e) => {
+    const selectedDeck = e.target.value;
+    const level = selectedDeck.split(' ')[1]; // Extract number from "HSK 1"
+
+    // Show loading state
+    bigChar.textContent = "⏳";
+    pinyin.textContent = "Loading...";
+    meaning.textContent = "Loading HSK " + level + " vocabulary...";
+
+    try {
+        // Load the level data if not already loaded
+        await window.loadHSKLevel(parseInt(level));
+
+        // Update current deck
+        currentDeckName = selectedDeck;
+        DECK = CHARACTER_DECKS[currentDeckName] || [];
+        current = 0;
+
+        if (DECK.length > 0) {
+            setEntry(0);
+        } else {
+            console.error('No characters found for', currentDeckName);
+            meaning.textContent = "No single characters found for " + selectedDeck;
+        }
+    } catch (error) {
+        console.error('Failed to load HSK level:', error);
+        bigChar.textContent = "❌";
+        pinyin.textContent = "Error";
+        meaning.textContent = "Failed to load HSK " + level + " vocabulary";
+    }
+});
+
+function resizeCanvases() {
+    const rect = board.getBoundingClientRect();
+    const W = Math.floor(rect.width * dpr);
+    const H = Math.floor(rect.height * dpr);
+
+    for (const c of [bgLayer, drawLayer, maskCanvas]) {
+        c.width = W;
+        c.height = H;
+        c.style.width = rect.width + 'px';
+        c.style.height = rect.height + 'px';
+    }
+    bgCtx = bgLayer.getContext('2d');
+    drawCtx = drawLayer.getContext('2d');
+    drawCtx.lineCap = 'round';
+    drawCtx.lineJoin = 'round';
+
+    redrawBackground();
+    if (DECK && DECK[current]) {
+        drawMaskForChar(DECK[current]);
+    }
+}
+
+function redrawBackground() {
+    const ctx = bgCtx;
+    const W = bgLayer.width,
+        H = bgLayer.height;
+    ctx.clearRect(0, 0, W, H);
+    if (showHint && DECK && DECK[current] && DECK[current].char) {
+        // faint character outline for guidance
+        ctx.save();
+        ctx.globalAlpha = 0.10;
+        drawGlyph(ctx, DECK[current].char, W, H, true);
+        ctx.restore();
+    }
+}
+
+function drawMaskForChar(entry) {
+    if (!entry || !entry.char) {
+        console.log('Cannot draw mask: invalid entry', entry);
+        return;
+    }
+
+    const W = maskCanvas.width,
+        H = maskCanvas.height;
+    maskCtx.clearRect(0, 0, W, H);
+    drawGlyph(maskCtx, entry.char, W, H, false);
+}
+
+// Draws a big centered glyph into the given context.
+// If outline==true, we stroke instead of fill (for nicer hint).
+function drawGlyph(ctx, char, W, H, outline) {
+    if (!char) return;
+
+    ctx.save();
+    const pad = Math.min(W, H) * 0.12; // inner padding
+    const size = Math.min(W, H) - pad * 2; // font size in pixels
+    ctx.translate(W / 2, H / 2);
+    const styles = getComputedStyle(document.documentElement);
+    const textColor = styles.getPropertyValue('--muted').trim();
+    ctx.fillStyle = textColor;
+    ctx.strokeStyle = textColor;
+    // Use a heavy weight for a thicker mask band to be forgiving
+    ctx.font = `900 ${size}px \"Noto Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", STHeiti, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (outline) {
+        ctx.lineWidth = Math.max(4, size * 0.02);
+        ctx.strokeText(char, 0, 0);
+    } else {
+        ctx.fillText(char, 0, 0);
+    }
+    ctx.restore();
+}
+
+function setEntry(i) {
+    if (!DECK || DECK.length === 0) {
+        console.log('No deck data available yet');
+        bigChar.textContent = "⏳";
+        pinyin.textContent = "Loading...";
+        meaning.textContent = "Loading vocabulary...";
+        return;
+    }
+
+    current = (i + DECK.length) % DECK.length;
+    const e = DECK[current];
+
+    // Check if entry has required properties
+    if (!e || !e.char) {
+        console.error('Invalid entry:', e);
+        return;
+    }
+
+    console.log('Setting entry:', e); // Debug log
+
+    bigChar.textContent = e.char;
+    pinyin.textContent = e.pinyin || '';
+    meaning.textContent = e.meaning || '';
+
+    clearInk();
+    redrawBackground();
+    drawMaskForChar(e);
+    undoStack = [];
+    updateUndoButton();
+    saveProgress(); //  ◄◄◄ ADD THIS LINE
+}
+
+function clearInk() {
+    if (drawCtx) {
+        drawCtx.clearRect(0, 0, drawLayer.width, drawLayer.height);
+    }
+    undoStack = [];
+    updateUndoButton();
+}
+
+function saveCanvasState() {
+    if (drawCtx) {
+        const imageData = drawCtx.getImageData(0, 0, drawLayer.width, drawLayer.height);
+        undoStack.push(imageData);
+        // Keep only last 20 states to prevent memory issues
+        if (undoStack.length > 20) {
+            undoStack.shift();
+        }
+        updateUndoButton();
+    }
+}
+
+function undo() {
+    if (undoStack.length > 0 && drawCtx) {
+        const imageData = undoStack.pop();
+        drawCtx.putImageData(imageData, 0, 0);
+        updateUndoButton();
+    }
+}
+
+function updateUndoButton() {
+    btnUndo.disabled = undoStack.length === 0;
+    btnUndo.style.opacity = undoStack.length === 0 ? '0.5' : '1';
+}
+
+function saveProgress() {
+    if (!currentDeckName || DECK.length === 0) return; // Don't save if nothing is loaded
+
+    const progress = {
+        deckName: currentDeckName,
+        charIndex: current
+    };
+
+    localStorage.setItem('hanziPracticeProgress', JSON.stringify(progress));
+    console.log('Progress saved:', progress);
+}
+
+// Drawing handlers (pointer events)
+function toCanvasPoint(ev, target) {
+    const rect = target.getBoundingClientRect();
+    const x = (ev.clientX - rect.left) * dpr;
+    const y = (ev.clientY - rect.top) * dpr;
+    return { x, y };
+}
+
+function pointerDown(ev) {
+    const rect = drawLayer.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+
+    // Check if click is within the 20px margin (inner drawing area)
+    if (x < 20 || y < 20 || x > rect.width - 20 || y > rect.height - 20) {
+        return; // Don't start drawing outside the inner area
+    }
+
+    saveCanvasState();
+
+    drawing = true;
+    drawLayer.setPointerCapture(ev.pointerId);
+    last = toCanvasPoint(ev, drawLayer);
+}
+
+function pointerMove(ev) {
+    if (!drawing || !drawCtx) return;
+
+    const rect = drawLayer.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+
+    // Stop drawing if we move outside the inner area
+    if (x < 20 || y < 20 || x > rect.width - 20 || y > rect.height - 20) {
+        drawing = false;
+        last = null;
+        return;
+    }
+
+    const pt = toCanvasPoint(ev, drawLayer);
+    const pressure = Math.max(0.2, ev.pressure || 0.5);
+    drawCtx.lineWidth = penWidth * dpr * (0.6 + pressure * 0.8);
+    const styles = getComputedStyle(document.documentElement);
+    const inkColor = styles.getPropertyValue('--text').trim();
+    drawCtx.strokeStyle = inkColor;
+    drawCtx.beginPath();
+    drawCtx.moveTo(last.x, last.y);
+    drawCtx.lineTo(pt.x, pt.y);
+    drawCtx.stroke();
+    last = pt;
+}
+
+function pointerUp(ev) {
+    drawing = false;
+    last = null;
+}
+
+function populateCharGrid() {
+    if (!DECK || DECK.length === 0) return;
+
+    charGrid.innerHTML = '';
+    modalTitle.textContent = `${currentDeckName} Characters (${DECK.length})`;
+
+    DECK.forEach((entry, index) => {
+        const charItem = document.createElement('button');
+        charItem.className = 'char-grid-item';
+        charItem.textContent = entry.char;
+        charItem.dataset.index = index;
+        charGrid.appendChild(charItem);
+    });
+}
+
+function openModal() {
+    populateCharGrid();
+    charModal.classList.remove('hidden');
+}
+
+function closeModal() {
+    charModal.classList.add('hidden');
+}
+
+btnShowAll.addEventListener('click', openModal);
+
+modalClose.addEventListener('click', closeModal);
+charModal.addEventListener('click', (e) => {
+    if (e.target === charModal) {
+        closeModal();
+    }
+});
+
+charGrid.addEventListener('click', (e) => {
+    const target = e.target.closest('.char-grid-item');
+    if (target && target.dataset.index) {
+        const charIndex = parseInt(target.dataset.index, 10);
+        setEntry(charIndex);
+        closeModal();
+    }
+});
+
+
+// UI actions
+btnHint.addEventListener('click', () => { showHint = !showHint;
+    redrawBackground(); });
+btnClear.addEventListener('click', clearInk);
+btnUndo.addEventListener('click', undo);
+btnPrev.addEventListener('click', () => setEntry(current - 1));
+btnNext.addEventListener('click', () => setEntry(current + 1));
+btnTheme.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? null : 'light';
+    document.documentElement.setAttribute('data-theme', newTheme || 'dark');
+    localStorage.setItem('theme', newTheme || 'dark');
+});
+btnStroke.addEventListener('click', () => {
+    if (DECK && DECK[current] && DECK[current].char) {
+        const c = DECK[current].char;
+        const q = encodeURIComponent(`chinese/${c}`);
+        window.open(`https://www.strokeorder.com/${q}`, '_blank');
+    }
+});
+
+// Keyboard shortcuts
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'h' || e.key === 'H') { showHint = true;
+        redrawBackground(); }
+    if (e.key === 'Backspace') { e.preventDefault();
+        clearInk(); }
+    if (e.key === 'ArrowLeft') { setEntry(current - 1); }
+    if (e.key === 'ArrowRight') { setEntry(current + 1); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault();
+        undo(); }
+});
+window.addEventListener('keyup', (e) => {
+    if (e.key === 'h' || e.key === 'H') { showHint = false;
+        redrawBackground(); }
+});
+
+// Pointer events
+['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'pointerleave'].forEach(type => {
+    drawLayer.addEventListener(type, (ev) => {
+        if (type === 'pointerdown') pointerDown(ev);
+        else if (type === 'pointermove') pointerMove(ev);
+        else pointerUp(ev);
+    }, { passive: false });
+});
+
+// Init
+window.addEventListener('resize', resizeCanvases);
+window.addEventListener('load', async () => {
+    resizeCanvases();
+
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateUndoButton();
+
+    // LOAD PROGRESS LOGIC
+    const savedProgressJSON = localStorage.getItem('hanziPracticeProgress');
+    let progressLoaded = false;
+
+    if (savedProgressJSON) {
+        try {
+            const savedProgress = JSON.parse(savedProgressJSON);
+            console.log('Found saved progress:', savedProgress);
+
+            if (savedProgress.deckName && typeof savedProgress.charIndex === 'number') {
+                // Set the dropdown to the correct deck
+                deckSelector.value = savedProgress.deckName;
+                currentDeckName = savedProgress.deckName;
+                const level = savedProgress.deckName.split(' ')[1];
+
+                // Load the deck data
+                await window.loadHSKLevel(parseInt(level));
+
+                // Once loaded, jump to the specific character
+                setEntry(savedProgress.charIndex);
+                progressLoaded = true;
+            }
+        } catch (error) {
+            console.error("Failed to load progress:", error);
+        }
+    }
+
+    // If no progress was loaded, load the default HSK 1 deck
+    if (!progressLoaded) {
+        try {
+            await window.loadHSKLevel(1);
+        } catch (error) {
+            console.error("Failed to load initial HSK 1 deck:", error);
+        }
+    }
+});
