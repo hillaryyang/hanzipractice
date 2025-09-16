@@ -417,12 +417,14 @@ button.ghost.active {
    Mobile & Tablet Touch Styles
    ========================================= */
 canvas#drawLayer {
-  /* This is the most important rule. It tells the browser to 
-     let our JavaScript handle all touch actions on the canvas. */
+  /* This tells the browser to let our JavaScript
+     handle all touch actions on the canvas. */
   touch-action: none;
 }
 
-body, .app {
+body, aside {
+  -webkit-touch-callout: none;
+
   /* These rules prevent text from being highlighted when you 
      accidentally drag outside the canvas. */
   -webkit-user-select: none; /* For Safari/Chrome */

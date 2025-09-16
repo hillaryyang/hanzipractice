@@ -268,8 +268,12 @@ function toCanvasPoint(ev, target) {
 }
 
 function pointerDown(ev) {
-    ev.preventDefault();
+    if (ev.pointerType !== 'pen') {
+        return;
+    }
     
+    ev.preventDefault();
+
     const rect = drawLayer.getBoundingClientRect();
     const x = ev.clientX - rect.left;
     const y = ev.clientY - rect.top;
