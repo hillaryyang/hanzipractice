@@ -21,6 +21,21 @@
       --grid:#1b2330;
       --grid-strong:#263141;
     }
+
+    [data-theme="light"]{
+      --bg:#f8fafc;
+      --panel:#ffffff;
+      --muted:#64748b;
+      --text:#1e293b;
+      --accent:#0ea5e9;
+      --accent-2:#0284c7;
+      --good:#059669;
+      --warn:#d97706;
+      --bad:#dc2626;
+      --btn:#f1f5f9;
+      --grid:#e2e8f0;
+      --grid-strong:#cbd5e1;
+    }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -32,7 +47,7 @@
     .char-head{display:flex; align-items:center; gap:12px}
     .big-char{font-family:"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", STHeiti, system-ui, sans-serif; font-size:44px; line-height:1; background:#0f1319; border:1px solid #1d2632; border-radius:12px; width:64px; height:64px; display:grid; place-items:center}
     .pinyin{background:#0f1319; border:1px solid #1d2632; padding:6px 10px; border-radius:999px; font-weight:600; color:#cfe7ff}
-    .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    .stat-grid{display:grid; grid-template-columns:1fr; gap:12px}
     .stat{background:#0f1319; border:1px solid #1d2632; border-radius:12px; padding:12px}
     .stat .label{font-size:12px; color:var(--muted); letter-spacing:.02em}
     .stat .value{font-weight:700; font-size:18px; margin-top:4px}
@@ -113,9 +128,6 @@
 
       <div class="stat-grid">
         <div class="stat"><div class="label">Meaning</div><div class="value" id="meaning">to study; learn</div></div>
-        <div class="stat"><div class="label">HSK</div><div class="value" id="hsk">1</div></div>
-        <div class="stat"><div class="label">Strokes</div><div class="value" id="strokes">8</div></div>
-        <div class="stat"><div class="label">Radical</div><div class="value" id="radical">⺍ + 子</div></div>
       </div>
 
       <div class="example">
@@ -127,6 +139,10 @@
       <div class="btn-row">
         <button id="btnStroke" title="Open a stroke order search" class="ghost">▶ Stroke order</button>
         <button id="btnHint" class="ghost">💡 Hint</button>
+      </div>
+
+      <div class="btn-row">
+        <button id="btnTheme" class="ghost">🌙 Dark</button>
       </div>
 
       <div class="hint-pill">Tip: hold <span class="kbd">H</span> to peek the outline, <span class="kbd">⌫</span> to clear, arrows for next/prev.</div>
@@ -167,34 +183,34 @@
 // --- Character deck (edit/add as you like) ---
 const DECK = [
   {
-    char: "学", pinyin: "xué", meaning: "to study; learn", hsk: 1, strokes: 8,
-    radical: "⺍ + 子", exampleZh: "我学中文。", exampleEn: "I study Chinese.",
-    hint: "Top cover with three dots; ‘子’ (child) at the bottom."
+    char: "学", pinyin: "xué", meaning: "to study; learn",
+    exampleZh: "我学中文。", exampleEn: "I study Chinese.",
+    hint: "Top cover with three dots; '子' (child) at the bottom."
   },
   {
-    char: "人", pinyin: "rén", meaning: "person", hsk: 1, strokes: 2,
-    radical: "人", exampleZh: "我们是好人。", exampleEn: "We are good people.",
+    char: "人", pinyin: "rén", meaning: "person",
+    exampleZh: "我们是好人。", exampleEn: "We are good people.",
     hint: "Two strokes forming a walking person; left slants first."
   },
   {
-    char: "你", pinyin: "nǐ", meaning: "you", hsk: 1, strokes: 7,
-    radical: "亻", exampleZh: "你好吗？", exampleEn: "How are you?",
-    hint: "Left side ‘亻’, right side ‘尔’. Left-to-right."
+    char: "你", pinyin: "nǐ", meaning: "you",
+    exampleZh: "你好吗？", exampleEn: "How are you?",
+    hint: "Left side '亻', right side '尔'. Left-to-right."
   },
   {
-    char: "我", pinyin: "wǒ", meaning: "I; me", hsk: 1, strokes: 7,
-    radical: "戈", exampleZh: "我是学生。", exampleEn: "I am a student.",
-    hint: "Think ‘hand’ holding a ‘spear’. Center cross first."
+    char: "我", pinyin: "wǒ", meaning: "I; me",
+    exampleZh: "我是学生。", exampleEn: "I am a student.",
+    hint: "Think 'hand' holding a 'spear'. Center cross first."
   },
   {
-    char: "中", pinyin: "zhōng", meaning: "middle; center", hsk: 1, strokes: 4,
-    radical: "丨", exampleZh: "中国", exampleEn: "China",
-    hint: "Box ‘口’ with a vertical through the center."
+    char: "中", pinyin: "zhōng", meaning: "middle; center",
+    exampleZh: "中国", exampleEn: "China",
+    hint: "Box '口' with a vertical through the center."
   },
   {
-    char: "国", pinyin: "guó", meaning: "country; nation", hsk: 1, strokes: 8,
-    radical: "囗", exampleZh: "美国", exampleEn: "USA",
-    hint: "Outer enclosure with ‘玉/王’ inside (dot on top-left)."
+    char: "国", pinyin: "guó", meaning: "country; nation",
+    exampleZh: "美国", exampleEn: "USA",
+    hint: "Outer enclosure with '玉/王' inside (dot on top-left)."
   }
 ];
 
@@ -202,13 +218,11 @@ const DECK = [
 const bigChar = document.getElementById('bigChar');
 const pinyin  = document.getElementById('pinyin');
 const meaning = document.getElementById('meaning');
-const hsk     = document.getElementById('hsk');
-const strokes = document.getElementById('strokes');
-const radical = document.getElementById('radical');
 const exZh    = document.getElementById('exZh');
 const exEn    = document.getElementById('exEn');
 const btnStroke = document.getElementById('btnStroke');
 const btnHint   = document.getElementById('btnHint');
+const btnTheme = document.getElementById('btnTheme');
 const btnCheck  = document.getElementById('btnCheck');
 const btnClear  = document.getElementById('btnClear');
 const btnPrev   = document.getElementById('btnPrev');
@@ -275,8 +289,10 @@ function drawGlyph(ctx, char, W, H, outline){
   const pad = Math.min(W,H) * 0.12;   // inner padding
   const size = Math.min(W,H) - pad*2; // font size in pixels
   ctx.translate(W/2, H/2);
-  ctx.fillStyle = '#7f8ea3';
-  ctx.strokeStyle = '#7f8ea3';
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue('--muted').trim();
+  ctx.fillStyle = textColor;
+  ctx.strokeStyle = textColor;
   // Use a heavy weight for a thicker mask band to be forgiving
   ctx.font = `900 ${size}px \"Noto Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", STHeiti, sans-serif`;
   ctx.textAlign = 'center';
@@ -294,8 +310,7 @@ function setEntry(i){
   current = (i + DECK.length) % DECK.length;
   const e = DECK[current];
   bigChar.textContent = e.char; pinyin.textContent = e.pinyin;
-  meaning.textContent = e.meaning; hsk.textContent = e.hsk;
-  strokes.textContent = e.strokes; radical.textContent = e.radical || '—';
+  meaning.textContent = e.meaning; 
   exZh.textContent = e.exampleZh; exEn.textContent = e.exampleEn;
   clearInk();
   redrawBackground();
@@ -346,7 +361,9 @@ function pointerMove(ev){
   const pt = toCanvasPoint(ev, drawLayer);
   const pressure = Math.max(0.2, ev.pressure || 0.5);
   drawCtx.lineWidth = penWidth * dpr * (0.6 + pressure*0.8);
-  drawCtx.strokeStyle = '#dbeafe';
+  const styles = getComputedStyle(document.documentElement);
+  const inkColor = styles.getPropertyValue('--text').trim();
+  drawCtx.strokeStyle = inkColor;
   drawCtx.beginPath();
   drawCtx.moveTo(last.x, last.y);
   drawCtx.lineTo(pt.x, pt.y);
@@ -362,11 +379,18 @@ btnHint.addEventListener('click', ()=>{ showHint = !showHint; redrawBackground()
 btnClear.addEventListener('click', clearInk);
 btnPrev.addEventListener('click', ()=> setEntry(current-1));
 btnNext.addEventListener('click', ()=> setEntry(current+1));
+btnTheme.addEventListener('click', ()=>{
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? null : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme || 'dark');
+  btnTheme.textContent = newTheme === 'light' ? '🌙 Dark' : '☀️ Light';
+  localStorage.setItem('theme', newTheme || 'dark');
+});
 
 btnStroke.addEventListener('click', ()=>{
   const c = DECK[current].char;
-  const q = encodeURIComponent(`${c} stroke order`);
-  window.open(`https://www.google.com/search?q=${q}`, '_blank');
+  const q = encodeURIComponent(`chinese/${c}`);
+  window.open(`https://www.strokeorder.com/${q}`, '_blank');
 });
 
 // Keyboard shortcuts
@@ -392,6 +416,16 @@ window.addEventListener('keyup', (e)=>{
 // Init
 window.addEventListener('resize', resizeCanvases);
 resizeCanvases();
+// Initialize theme
+const savedTheme = localStorage.getItem('theme') || 'dark';
+if (savedTheme === 'light') {
+  document.documentElement.setAttribute('data-theme', 'light');
+  btnTheme.textContent = '🌙 Dark';
+} else {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  btnTheme.textContent = '☀️ Light';
+}
+
 setEntry(0);
 
 </script>
