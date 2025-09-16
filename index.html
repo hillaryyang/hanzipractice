@@ -166,6 +166,29 @@
     .theme-toggle svg{
       transition: transform 0.3s ease;
     }
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .loading::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid var(--muted);
+      border-top: 2px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
 
     /* Select decks */
     .deck-selector{
@@ -214,6 +237,10 @@
           <select id="deckSelector" class="deck-selector">
             <option value="HSK 1">HSK 1</option>
             <option value="HSK 2">HSK 2</option>
+            <option value="HSK 3">HSK 3</option>
+            <option value="HSK 4">HSK 4</option>
+            <option value="HSK 5">HSK 5</option>
+            <option value="HSK 6">HSK 6</option>
           </select>
         </div>
       </div>
@@ -291,11 +318,35 @@ let DECK = CHARACTER_DECKS[currentDeckName];
 const deckSelector = document.getElementById('deckSelector');
 
 // Add deck change handler
-deckSelector.addEventListener('change', (e) => {
-  currentDeckName = e.target.value;
-  DECK = CHARACTER_DECKS[currentDeckName];
-  current = 0;
-  setEntry(0);
+deckSelector.addEventListener('change', async (e) => {
+  const selectedDeck = e.target.value;
+  const level = selectedDeck.split(' ')[1]; // Extract number from "HSK 1"
+  
+  // Show loading state
+  bigChar.textContent = "⏳";
+  pinyin.textContent = "Loading...";
+  meaning.textContent = "Loading HSK " + level + " vocabulary...";
+  exZh.textContent = "";
+  exEn.textContent = "";
+  
+  try {
+    // Load the level data if not already loaded
+    await window.loadHSKLevel(parseInt(level));
+    
+    // Update current deck
+    currentDeckName = selectedDeck;
+    DECK = CHARACTER_DECKS[currentDeckName];
+    current = 0;
+    setEntry(0);
+  } catch (error) {
+    console.error('Failed to load HSK level:', error);
+    // Show error state
+    bigChar.textContent = "❌";
+    pinyin.textContent = "Error";
+    meaning.textContent = "Failed to load HSK " + level + " vocabulary";
+    exZh.textContent = "Please check your internet connection";
+    exEn.textContent = "Using fallback data";
+  }
 });
 
 // DOM
@@ -391,12 +442,23 @@ function drawGlyph(ctx, char, W, H, outline){
   ctx.restore();
 }
 
-function setEntry(i){
+function setEntry(i) {
+  if (!DECK || DECK.length === 0) {
+    bigChar.textContent = "⏳";
+    pinyin.textContent = "Loading...";
+    meaning.textContent = "Loading vocabulary...";
+    exZh.textContent = "";
+    exEn.textContent = "";
+    return;
+  }
+  
   current = (i + DECK.length) % DECK.length;
   const e = DECK[current];
-  bigChar.textContent = e.char; pinyin.textContent = e.pinyin;
+  bigChar.textContent = e.char; 
+  pinyin.textContent = e.pinyin;
   meaning.textContent = e.meaning; 
-  exZh.textContent = e.exampleZh; exEn.textContent = e.exampleEn;
+  exZh.textContent = e.exampleZh; 
+  exEn.textContent = e.exampleEn;
     
   clearInk();
   redrawBackground();
@@ -404,6 +466,7 @@ function setEntry(i){
   undoStack = [];
   updateUndoButton();
 }
+
 
 function clearInk(){
   drawCtx.clearRect(0,0,drawLayer.width,drawLayer.height);
@@ -517,6 +580,28 @@ window.addEventListener('keydown', (e)=>{
 });
 window.addEventListener('keyup', (e)=>{
   if (e.key === 'h' || e.key === 'H'){ showHint = false; redrawBackground(); }
+});
+
+window.addEventListener('hskDataLoaded', (event) => {
+  const { level, count, error } = event.detail;
+  console.log(`HSK ${level} loaded: ${count} characters${error ? ' (with errors)' : ''}`);
+  
+  // If this is the currently selected level, refresh the display
+  if (currentDeckName === `HSK ${level}`) {
+    DECK = CHARACTER_DECKS[currentDeckName];
+    if (DECK.length > 0 && current >= DECK.length) {
+      current = 0; // Reset if current index is out of bounds
+    }
+    if (DECK.length > 0) {
+      setEntry(current);
+    }
+  }
+  
+  // Update the deck selector to show character counts
+  const option = deckSelector.querySelector(`option[value="HSK ${level}"]`);
+  if (option && count > 0) {
+    option.textContent = `HSK ${level} (${count} chars)`;
+  }
 });
 
 // Pointer events
