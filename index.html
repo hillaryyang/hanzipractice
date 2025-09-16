@@ -167,6 +167,23 @@
       transition: transform 0.3s ease;
     }
 
+    /* Select decks */
+    .deck-selector{
+      background: var(--btn);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .deck-selector:focus{
+      outline: none;
+      border-color: var(--accent);
+    }
+
     [data-theme="light"] .theme-toggle svg{
       transform: rotate(180deg);
     }
@@ -194,7 +211,11 @@
       <div class="header-left">
         <h1 class="app-title">Hanzi Practice</h1>
         <div class="header-info">
-          <span class="character-counter" id="charCounter">Character 1 of 6</span>
+          <select id="deckSelector" class="deck-selector">
+            <option value="基础字">基础字</option>
+            <option value="HSK 1">HSK 1</option>
+            <option value="HSK 2">HSK 2</option>
+          </select>
         </div>
       </div>
       <div class="header-right">
@@ -252,6 +273,7 @@
     </main>
   </div>
 
+<script src="characters.js"></script>
 <script>
 /* =====================
    Minimal Hanzi practice
@@ -265,38 +287,17 @@
 ===================== */
 
 // --- Character deck (edit/add as you like) ---
-const DECK = [
-  {
-    char: "学", pinyin: "xué", meaning: "to study; learn",
-    exampleZh: "我学中文。", exampleEn: "I study Chinese.",
-    hint: "Top cover with three dots; '子' (child) at the bottom."
-  },
-  {
-    char: "人", pinyin: "rén", meaning: "person",
-    exampleZh: "我们是好人。", exampleEn: "We are good people.",
-    hint: "Two strokes forming a walking person; left slants first."
-  },
-  {
-    char: "你", pinyin: "nǐ", meaning: "you",
-    exampleZh: "你好吗？", exampleEn: "How are you?",
-    hint: "Left side '亻', right side '尔'. Left-to-right."
-  },
-  {
-    char: "我", pinyin: "wǒ", meaning: "I; me",
-    exampleZh: "我是学生。", exampleEn: "I am a student.",
-    hint: "Think 'hand' holding a 'spear'. Center cross first."
-  },
-  {
-    char: "中", pinyin: "zhōng", meaning: "middle; center",
-    exampleZh: "中国", exampleEn: "China",
-    hint: "Box '口' with a vertical through the center."
-  },
-  {
-    char: "国", pinyin: "guó", meaning: "country; nation",
-    exampleZh: "美国", exampleEn: "USA",
-    hint: "Outer enclosure with '玉/王' inside (dot on top-left)."
-  }
-];
+let currentDeckName = "HSK 1";
+let DECK = CHARACTER_DECKS[currentDeckName];
+const deckSelector = document.getElementById('deckSelector');
+
+// Add deck change handler
+deckSelector.addEventListener('change', (e) => {
+  currentDeckName = e.target.value;
+  DECK = CHARACTER_DECKS[currentDeckName];
+  current = 0;
+  setEntry(0);
+});
 
 // DOM
 const bigChar = document.getElementById('bigChar');
