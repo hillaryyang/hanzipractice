@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32'><defs><linearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%2367e8f9;stop-opacity:1' /><stop offset='100%25' style='stop-color:%2322d3ee;stop-opacity:1' /></linearGradient></defs><circle cx='16' cy='16' r='14' fill='url(%23bg)' /><text x='16' y='21' font-family='Noto Sans SC, PingFang SC, Hiragino Sans GB, STHeiti, sans-serif' font-size='16' font-weight='700' text-anchor='middle' fill='white'>学</text></svg>">
 </head>
 <body>
   <header class="global-header">
@@ -37,12 +38,12 @@
   <div class="app">
     <aside>
       <div class="char-head">
-        <div class="big-char" id="bigChar">学</div>
-        <div class="pinyin" id="pinyin">xué</div>
+        <div class="big-char" id="bigChar">⏳</div>
+        <div class="pinyin" id="pinyin">Loading...</div>
       </div>
 
       <div class="stat-grid">
-        <div class="stat"><div class="label">Meaning</div><div class="value" id="meaning">to study; learn</div></div>
+        <div class="stat"><div class="label">Meaning</div><div class="value" id="meaning">Loading vocabulary...</div></div>
       </div>
 
       <div class="btn-row">
@@ -81,7 +82,7 @@
    — Features —
    • Apple Pencil / touch / mouse drawing
    • Hint overlay (hold H or toggle)
-   • “Check” compares your ink to a bold glyph mask
+   • "Check" compares your ink to a bold glyph mask
    • Next/Prev through a small built-in deck (editable)
    • Works completely offline on GH Pages (no build tools)
 ===================== */
@@ -90,65 +91,11 @@
 let currentDeckName = "HSK 1";
 let DECK = [];  // Start with empty array
 
-window.addEventListener('hskDataLoaded', (event) => {
-  const { level } = event.detail;
-  console.log(`HSK ${level} data loaded event received`);
-  
-  // If this is the currently selected level, update the deck
-  if (currentDeckName === `HSK ${level}`) {
-    DECK = CHARACTER_DECKS[currentDeckName] || [];
-    console.log(`Updated DECK for ${currentDeckName}, length:`, DECK.length);
-    
-    if (DECK.length > 0) {
-      current = 0;
-      setEntry(current);
-    }
-  }
-});
-
-// Add deck change handler
-deckSelector.addEventListener('change', async (e) => {
-  const selectedDeck = e.target.value;
-  const level = selectedDeck.split(' ')[1]; // Extract number from "HSK 1"
-  
-  // Show loading state
-  bigChar.textContent = "⏳";
-  pinyin.textContent = "Loading...";
-  meaning.textContent = "Loading HSK " + level + " vocabulary...";
-  exZh.textContent = "";
-  exEn.textContent = "";
-  
-  try {
-    // Load the level data if not already loaded
-    await window.loadHSKLevel(parseInt(level));
-    
-    // Update current deck
-    currentDeckName = selectedDeck;
-    DECK = CHARACTER_DECKS[currentDeckName] || [];
-    current = 0;
-    
-    if (DECK.length > 0) {
-      setEntry(0);
-    } else {
-      console.error('No characters found for', currentDeckName);
-      meaning.textContent = "No single characters found for " + selectedDeck;
-    }
-  } catch (error) {
-    console.error('Failed to load HSK level:', error);
-    bigChar.textContent = "❌";
-    pinyin.textContent = "Error";
-    meaning.textContent = "Failed to load HSK " + level + " vocabulary";
-    exZh.textContent = "Please check your internet connection";
-    exEn.textContent = "";
-  }
-});
-
-// DOM
+// DOM elements (declared after HTML loads)
+const deckSelector = document.getElementById('deckSelector');
 const bigChar = document.getElementById('bigChar');
 const pinyin  = document.getElementById('pinyin');
 const meaning = document.getElementById('meaning');
-const exZh    = document.getElementById('exZh');
-const exEn    = document.getElementById('exEn');
 const btnStroke = document.getElementById('btnStroke');
 const btnHint   = document.getElementById('btnHint');
 const btnTheme = document.getElementById('btnTheme');
@@ -175,6 +122,62 @@ let last = null;           // last point
 let penWidth = 6;          // base width (scaled by pressure)
 let undoStack = [];
 
+// Event listener for HSK data loaded
+window.addEventListener('hskDataLoaded', (event) => {
+  const { level, count, error } = event.detail;
+  console.log(`HSK ${level} loaded: ${count} characters${error ? ' (with errors)' : ''}`);
+  
+  // If this is the currently selected level, update the deck
+  if (currentDeckName === `HSK ${level}`) {
+    DECK = CHARACTER_DECKS[currentDeckName] || [];
+    console.log(`Updated DECK for ${currentDeckName}, length:`, DECK.length);
+    
+    if (DECK.length > 0) {
+      current = 0;
+      setEntry(current);
+    }
+  }
+  
+  // Update the deck selector to show character counts
+  const option = deckSelector.querySelector(`option[value="HSK ${level}"]`);
+  if (option && count > 0) {
+    option.textContent = `HSK ${level} (${count} chars)`;
+  }
+});
+
+// Add deck change handler
+deckSelector.addEventListener('change', async (e) => {
+  const selectedDeck = e.target.value;
+  const level = selectedDeck.split(' ')[1]; // Extract number from "HSK 1"
+  
+  // Show loading state
+  bigChar.textContent = "⏳";
+  pinyin.textContent = "Loading...";
+  meaning.textContent = "Loading HSK " + level + " vocabulary...";
+  
+  try {
+    // Load the level data if not already loaded
+    await window.loadHSKLevel(parseInt(level));
+    
+    // Update current deck
+    currentDeckName = selectedDeck;
+    DECK = CHARACTER_DECKS[currentDeckName] || [];
+    current = 0;
+    
+    if (DECK.length > 0) {
+      setEntry(0);
+    } else {
+      console.error('No characters found for', currentDeckName);
+      meaning.textContent = "No single characters found for " + selectedDeck;
+    }
+  } catch (error) {
+    console.error('Failed to load HSK level:', error);
+    bigChar.textContent = "❌";
+    pinyin.textContent = "Error";
+    meaning.textContent = "Failed to load HSK " + level + " vocabulary";
+  }
+});
+
 function resizeCanvases(){
   const rect = board.getBoundingClientRect();
   const W = Math.floor(rect.width  * dpr);
@@ -191,13 +194,15 @@ function resizeCanvases(){
   drawCtx.lineJoin= 'round';
 
   redrawBackground();
-  drawMaskForChar(DECK[current]);
+  if (DECK && DECK[current]) {
+    drawMaskForChar(DECK[current]);
+  }
 }
 
 function redrawBackground(){
   const ctx = bgCtx; const W = bgLayer.width, H = bgLayer.height;
   ctx.clearRect(0,0,W,H);
-  if (showHint){
+  if (showHint && DECK && DECK[current] && DECK[current].char){
     // faint character outline for guidance
     ctx.save();
     ctx.globalAlpha = 0.10;
@@ -220,6 +225,8 @@ function drawMaskForChar(entry) {
 // Draws a big centered glyph into the given context.
 // If outline==true, we stroke instead of fill (for nicer hint).
 function drawGlyph(ctx, char, W, H, outline){
+  if (!char) return;
+  
   ctx.save();
   const pad = Math.min(W,H) * 0.12;   // inner padding
   const size = Math.min(W,H) - pad*2; // font size in pixels
@@ -247,8 +254,6 @@ function setEntry(i) {
     bigChar.textContent = "⏳";
     pinyin.textContent = "Loading...";
     meaning.textContent = "Loading vocabulary...";
-    exZh.textContent = "";
-    exEn.textContent = "";
     return;
   }
   
@@ -266,8 +271,6 @@ function setEntry(i) {
   bigChar.textContent = e.char; 
   pinyin.textContent = e.pinyin || '';
   meaning.textContent = e.meaning || ''; 
-  exZh.textContent = e.exampleZh || ''; 
-  exEn.textContent = e.exampleEn || '';
     
   clearInk();
   redrawBackground();
@@ -277,23 +280,27 @@ function setEntry(i) {
 }
 
 function clearInk(){
-  drawCtx.clearRect(0,0,drawLayer.width,drawLayer.height);
+  if (drawCtx) {
+    drawCtx.clearRect(0,0,drawLayer.width,drawLayer.height);
+  }
   undoStack = [];
   updateUndoButton();
 }
 
 function saveCanvasState(){
-  const imageData = drawCtx.getImageData(0, 0, drawLayer.width, drawLayer.height);
-  undoStack.push(imageData);
-  // Keep only last 20 states to prevent memory issues
-  if (undoStack.length > 20) {
-    undoStack.shift();
+  if (drawCtx) {
+    const imageData = drawCtx.getImageData(0, 0, drawLayer.width, drawLayer.height);
+    undoStack.push(imageData);
+    // Keep only last 20 states to prevent memory issues
+    if (undoStack.length > 20) {
+      undoStack.shift();
+    }
+    updateUndoButton();
   }
-  updateUndoButton();
 }
 
 function undo(){
-  if (undoStack.length > 0) {
+  if (undoStack.length > 0 && drawCtx) {
     const imageData = undoStack.pop();
     drawCtx.putImageData(imageData, 0, 0);
     updateUndoButton();
@@ -331,7 +338,7 @@ function pointerDown(ev){
 }
 
 function pointerMove(ev){
-  if (!drawing) return;
+  if (!drawing || !drawCtx) return;
   
   const rect = drawLayer.getBoundingClientRect();
   const x = ev.clientX - rect.left;
@@ -356,6 +363,7 @@ function pointerMove(ev){
   drawCtx.stroke();
   last = pt;
 }
+
 function pointerUp(ev){
   drawing = false; last = null;
 }
@@ -373,9 +381,11 @@ btnTheme.addEventListener('click', ()=>{
   localStorage.setItem('theme', newTheme || 'dark');
 });
 btnStroke.addEventListener('click', ()=>{
-  const c = DECK[current].char;
-  const q = encodeURIComponent(`chinese/${c}`);
-  window.open(`https://www.strokeorder.com/${q}`, '_blank');
+  if (DECK && DECK[current] && DECK[current].char) {
+    const c = DECK[current].char;
+    const q = encodeURIComponent(`chinese/${c}`);
+    window.open(`https://www.strokeorder.com/${q}`, '_blank');
+  }
 });
 
 // Keyboard shortcuts
@@ -390,28 +400,6 @@ window.addEventListener('keyup', (e)=>{
   if (e.key === 'h' || e.key === 'H'){ showHint = false; redrawBackground(); }
 });
 
-window.addEventListener('hskDataLoaded', (event) => {
-  const { level, count, error } = event.detail;
-  console.log(`HSK ${level} loaded: ${count} characters${error ? ' (with errors)' : ''}`);
-  
-  // If this is the currently selected level, refresh the display
-  if (currentDeckName === `HSK ${level}`) {
-    DECK = CHARACTER_DECKS[currentDeckName];
-    if (DECK.length > 0 && current >= DECK.length) {
-      current = 0; // Reset if current index is out of bounds
-    }
-    if (DECK.length > 0) {
-      setEntry(current);
-    }
-  }
-  
-  // Update the deck selector to show character counts
-  const option = deckSelector.querySelector(`option[value="HSK ${level}"]`);
-  if (option && count > 0) {
-    option.textContent = `HSK ${level} (${count} chars)`;
-  }
-});
-
 // Pointer events
 ['pointerdown','pointermove','pointerup','pointercancel','pointerleave'].forEach(type=>{
   drawLayer.addEventListener(type, (ev)=>{
@@ -423,12 +411,13 @@ window.addEventListener('hskDataLoaded', (event) => {
 
 // Init
 window.addEventListener('resize', resizeCanvases);
-resizeCanvases();
-// Initialize theme
-const savedTheme = localStorage.getItem('theme') || 'dark';
-document.documentElement.setAttribute('data-theme', savedTheme);
-updateUndoButton();
-setEntry(0);
+window.addEventListener('load', () => {
+  resizeCanvases();
+  // Initialize theme
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateUndoButton();
+});
 
 </script>
 </body>

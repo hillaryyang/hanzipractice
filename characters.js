@@ -29,13 +29,13 @@ function convertHSKEntry(entry) {
   //   ]
   // }
   
-  const char = entry.simplified || entry.traditional;
+  const char = entry.simplified || entry.traditional || '';
   
   // Extract pinyin and meanings from the forms array
   let pinyin = '';
   let meanings = [];
   
-  if (entry.forms && entry.forms.length > 0) {
+  if (entry.forms && Array.isArray(entry.forms) && entry.forms.length > 0) {
     const firstForm = entry.forms[0];
     
     // Get pinyin from transcriptions
@@ -52,9 +52,9 @@ function convertHSKEntry(entry) {
   const meaning = meanings.length > 0 ? meanings.join('; ') : '';
   
   return {
-    char,
-    pinyin,
-    meaning,
+    char: char,
+    pinyin: pinyin,
+    meaning: meaning,
     exampleZh: '', // No examples
     exampleEn: ''  // No examples
   };
@@ -82,7 +82,6 @@ async function loadHSKLevel(level) {
     
     const data = await response.json();
     console.log(`Loaded ${data.length} words for HSK ${level}`);
-    console.log('Sample entry:', data[0]); // Show first entry structure for debugging
     
     // Convert to our format and filter for single characters only
     const convertedEntries = data
@@ -90,7 +89,8 @@ async function loadHSKLevel(level) {
         const char = entry.simplified || entry.traditional;
         return char && char.length === 1; // Only single characters for writing practice
       })
-      .map(convertHSKEntry);
+      .map(convertHSKEntry)
+      .filter(entry => entry.char && entry.pinyin && entry.meaning); // Only keep complete entries
     
     CHARACTER_DECKS[`HSK ${level}`] = convertedEntries;
     loadedLevels.add(level);
