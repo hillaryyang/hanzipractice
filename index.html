@@ -212,7 +212,6 @@
         <h1 class="app-title">Hanzi Practice</h1>
         <div class="header-info">
           <select id="deckSelector" class="deck-selector">
-            <option value="基础字">基础字</option>
             <option value="HSK 1">HSK 1</option>
             <option value="HSK 2">HSK 2</option>
           </select>
@@ -312,7 +311,6 @@ const btnUndo   = document.getElementById('btnUndo');
 const btnClear  = document.getElementById('btnClear');
 const btnPrev   = document.getElementById('btnPrev');
 const btnNext   = document.getElementById('btnNext');
-const charCounter = document.getElementById('charCounter');
 
 // Canvas setup
 const board    = document.getElementById('board');
@@ -399,10 +397,7 @@ function setEntry(i){
   bigChar.textContent = e.char; pinyin.textContent = e.pinyin;
   meaning.textContent = e.meaning; 
   exZh.textContent = e.exampleZh; exEn.textContent = e.exampleEn;
-  
-  // Update character counter
-  charCounter.textContent = `Character ${current + 1} of ${DECK.length}`;
-  
+    
   clearInk();
   redrawBackground();
   drawMaskForChar(e);
