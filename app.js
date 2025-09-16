@@ -49,7 +49,7 @@ let current = 0; // index in DECK
 let showHint = false; // toggle
 let drawing = false; // drawing state
 let last = null; // last point
-let penWidth = 6; // base width (scaled by pressure)
+let penWidth = 10; // base width (scaled by pressure)
 let undoStack = [];
 
 // Event listener for HSK data loaded
@@ -268,10 +268,10 @@ function toCanvasPoint(ev, target) {
 }
 
 function pointerDown(ev) {
-    if (ev.pointerType !== 'pen') {
+    if (ev.pointerType === 'touch') {
         return;
     }
-    
+
     ev.preventDefault();
 
     const rect = drawLayer.getBoundingClientRect();
