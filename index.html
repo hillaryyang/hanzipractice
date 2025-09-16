@@ -314,8 +314,23 @@
 
 // --- Character deck (edit/add as you like) ---
 let currentDeckName = "HSK 1";
-let DECK = CHARACTER_DECKS[currentDeckName];
-const deckSelector = document.getElementById('deckSelector');
+let DECK = [];  // Start with empty array
+
+window.addEventListener('hskDataLoaded', (event) => {
+  const { level } = event.detail;
+  console.log(`HSK ${level} data loaded event received`);
+  
+  // If this is the currently selected level, update the deck
+  if (currentDeckName === `HSK ${level}`) {
+    DECK = CHARACTER_DECKS[currentDeckName] || [];
+    console.log(`Updated DECK for ${currentDeckName}, length:`, DECK.length);
+    
+    if (DECK.length > 0) {
+      current = 0;
+      setEntry(current);
+    }
+  }
+});
 
 // Add deck change handler
 deckSelector.addEventListener('change', async (e) => {
@@ -335,17 +350,22 @@ deckSelector.addEventListener('change', async (e) => {
     
     // Update current deck
     currentDeckName = selectedDeck;
-    DECK = CHARACTER_DECKS[currentDeckName];
+    DECK = CHARACTER_DECKS[currentDeckName] || [];
     current = 0;
-    setEntry(0);
+    
+    if (DECK.length > 0) {
+      setEntry(0);
+    } else {
+      console.error('No characters found for', currentDeckName);
+      meaning.textContent = "No single characters found for " + selectedDeck;
+    }
   } catch (error) {
     console.error('Failed to load HSK level:', error);
-    // Show error state
     bigChar.textContent = "❌";
     pinyin.textContent = "Error";
     meaning.textContent = "Failed to load HSK " + level + " vocabulary";
     exZh.textContent = "Please check your internet connection";
-    exEn.textContent = "Using fallback data";
+    exEn.textContent = "";
   }
 });
 
@@ -412,7 +432,12 @@ function redrawBackground(){
   }
 }
 
-function drawMaskForChar(entry){
+function drawMaskForChar(entry) {
+  if (!entry || !entry.char) {
+    console.log('Cannot draw mask: invalid entry', entry);
+    return;
+  }
+  
   const W = maskCanvas.width, H = maskCanvas.height;
   maskCtx.clearRect(0,0,W,H);
   drawGlyph(maskCtx, entry.char, W, H, false);
@@ -444,6 +469,7 @@ function drawGlyph(ctx, char, W, H, outline){
 
 function setEntry(i) {
   if (!DECK || DECK.length === 0) {
+    console.log('No deck data available yet');
     bigChar.textContent = "⏳";
     pinyin.textContent = "Loading...";
     meaning.textContent = "Loading vocabulary...";
@@ -454,11 +480,20 @@ function setEntry(i) {
   
   current = (i + DECK.length) % DECK.length;
   const e = DECK[current];
+  
+  // Check if entry has required properties
+  if (!e || !e.char) {
+    console.error('Invalid entry:', e);
+    return;
+  }
+  
+  console.log('Setting entry:', e); // Debug log
+  
   bigChar.textContent = e.char; 
-  pinyin.textContent = e.pinyin;
-  meaning.textContent = e.meaning; 
-  exZh.textContent = e.exampleZh; 
-  exEn.textContent = e.exampleEn;
+  pinyin.textContent = e.pinyin || '';
+  meaning.textContent = e.meaning || ''; 
+  exZh.textContent = e.exampleZh || ''; 
+  exEn.textContent = e.exampleEn || '';
     
   clearInk();
   redrawBackground();
@@ -466,7 +501,6 @@ function setEntry(i) {
   undoStack = [];
   updateUndoButton();
 }
-
 
 function clearInk(){
   drawCtx.clearRect(0,0,drawLayer.width,drawLayer.height);
