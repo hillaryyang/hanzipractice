@@ -17,19 +17,46 @@ const HSK_BASE_URL = 'https://raw.githubusercontent.com/drkameleon/complete-hsk-
 
 // Function to convert HSK data format to our app format
 function convertHSKEntry(entry) {
-  // HSK format: { simplified: "你", traditional: "你", pinyin: "nǐ", definitions: ["you"] }
-  // Our format: { char: "你", pinyin: "nǐ", meaning: "you", exampleZh: "", exampleEn: "" }
+  // HSK format: 
+  // {
+  //   "simplified": "爱",
+  //   "forms": [
+  //     {
+  //       "traditional": "愛",
+  //       "transcriptions": { "pinyin": "ài" },
+  //       "meanings": ["to love; to be fond of; to like"]
+  //     }
+  //   ]
+  // }
   
   const char = entry.simplified || entry.traditional;
-  const pinyin = entry.pinyin || entry.pronunciation || '';
-  const meaning = Array.isArray(entry.definitions) ? entry.definitions.join('; ') : (entry.definitions || '');
+  
+  // Extract pinyin and meanings from the forms array
+  let pinyin = '';
+  let meanings = [];
+  
+  if (entry.forms && entry.forms.length > 0) {
+    const firstForm = entry.forms[0];
+    
+    // Get pinyin from transcriptions
+    if (firstForm.transcriptions && firstForm.transcriptions.pinyin) {
+      pinyin = firstForm.transcriptions.pinyin;
+    }
+    
+    // Get meanings
+    if (firstForm.meanings && Array.isArray(firstForm.meanings)) {
+      meanings = firstForm.meanings;
+    }
+  }
+  
+  const meaning = meanings.length > 0 ? meanings.join('; ') : '';
   
   return {
     char,
     pinyin,
     meaning,
-    exampleZh: '', // Remove example generation
-    exampleEn: ''  // Remove example generation
+    exampleZh: '', // No examples
+    exampleEn: ''  // No examples
   };
 }
 
