@@ -59,7 +59,7 @@
     button.small{padding:6px 10px; font-size:13px; border-radius:10px}
 
     main{flex:1; background:var(--panel); border-radius:16px; padding:16px; display:flex; flex-direction:column; min-height:500px;}
-    .board-wrap{position:relative; width:400px; height:400px; margin:0 auto; border-radius:12px; overflow:hidden; border:1px solid #1d2632; background:var(--bg)}    /* grid background */
+    .board-wrap{position:relative; width:400px; height:400px; margin:0 auto; border-radius:12px; overflow:hidden; border:1px solid var(--grid); background:var(--bg)}
     /* tianzige background - 4 quadrants */
     .grid-bg{
       position:absolute; 
@@ -99,10 +99,51 @@
       background-repeat: no-repeat;
     }
 
-    .main-header{
+    .global-header{
+      background: var(--panel);
+      border-bottom: 1px solid var(--grid);
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content{
       display: flex;
-      justify-content: flex-end;
-      margin-bottom: 16px;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header-left{
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .app-title{
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0;
+      color: var(--text);
+    }
+
+    .header-info{
+      display: flex;
+      gap: 15px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .character-counter{
+      font-weight: 500;
+    }
+
+    .header-right{
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .theme-toggle{
@@ -148,6 +189,24 @@
   </style>
 </head>
 <body>
+  <header class="global-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="app-title">Hanzi Practice</h1>
+        <div class="header-info">
+          <span class="character-counter" id="charCounter">Character 1 of 6</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="btnTheme" class="theme-toggle" title="Toggle theme">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
   <div class="app">
     <aside>
       <div class="char-head">
@@ -174,14 +233,6 @@
     </aside>
 
     <main>
-      <div class="main-header">
-        <button id="btnTheme" class="theme-toggle" title="Toggle theme">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
-      </div>
-
       <div class="board-wrap" id="board">
         <div class="grid-bg"></div>
         <canvas id="bgLayer"></canvas>
@@ -260,6 +311,7 @@ const btnUndo   = document.getElementById('btnUndo');
 const btnClear  = document.getElementById('btnClear');
 const btnPrev   = document.getElementById('btnPrev');
 const btnNext   = document.getElementById('btnNext');
+const charCounter = document.getElementById('charCounter');
 
 // Canvas setup
 const board    = document.getElementById('board');
@@ -346,6 +398,10 @@ function setEntry(i){
   bigChar.textContent = e.char; pinyin.textContent = e.pinyin;
   meaning.textContent = e.meaning; 
   exZh.textContent = e.exampleZh; exEn.textContent = e.exampleEn;
+  
+  // Update character counter
+  charCounter.textContent = `Character ${current + 1} of ${DECK.length}`;
+  
   clearInk();
   redrawBackground();
   drawMaskForChar(e);
