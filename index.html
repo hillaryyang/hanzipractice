@@ -26,6 +26,14 @@
         </div>
       </div>
       <div class="header-right">
+        <button id="btnShowAll" class="theme-toggle" title="Show all characters">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+        </button>
         <button id="btnTheme" class="theme-toggle" title="Toggle theme">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
@@ -73,7 +81,16 @@
       </div>
     </main>
   </div>
-
+<div id="charModal" class="char-modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modalTitle">HSK 1 Characters</h2>
+      <button id="modalClose" class="modal-close-btn">&times;</button>
+    </div>
+    <div id="charGrid" class="char-grid">
+      </div>
+  </div>
+</div>
 <script src="characters.js"></script>
 <script>
 /* =====================
@@ -103,6 +120,12 @@ const btnUndo   = document.getElementById('btnUndo');
 const btnClear  = document.getElementById('btnClear');
 const btnPrev   = document.getElementById('btnPrev');
 const btnNext   = document.getElementById('btnNext');
+
+const btnShowAll = document.getElementById('btnShowAll');
+const charModal = document.getElementById('charModal');
+const modalClose = document.getElementById('modalClose');
+const charGrid = document.getElementById('charGrid');
+const modalTitle = document.getElementById('modalTitle');
 
 // Canvas setup
 const board    = document.getElementById('board');
@@ -367,6 +390,48 @@ function pointerMove(ev){
 function pointerUp(ev){
   drawing = false; last = null;
 }
+
+function populateCharGrid() {
+  if (!DECK || DECK.length === 0) return;
+
+  charGrid.innerHTML = '';
+  modalTitle.textContent = `${currentDeckName} Characters (${DECK.length})`;
+
+  DECK.forEach((entry, index) => {
+    const charItem = document.createElement('button');
+    charItem.className = 'char-grid-item';
+    charItem.textContent = entry.char;
+    charItem.dataset.index = index;
+    charGrid.appendChild(charItem);
+  });
+}
+
+function openModal() {
+  populateCharGrid();
+  charModal.classList.remove('hidden');
+}
+
+function closeModal() {
+  charModal.classList.add('hidden');
+}
+
+btnShowAll.addEventListener('click', openModal);
+
+modalClose.addEventListener('click', closeModal);
+charModal.addEventListener('click', (e) => {
+  if (e.target === charModal) {
+    closeModal();
+  }
+});
+
+charGrid.addEventListener('click', (e) => {
+  const target = e.target.closest('.char-grid-item');
+  if (target && target.dataset.index) {
+    const charIndex = parseInt(target.dataset.index, 10);
+    setEntry(charIndex);
+    closeModal();
+  }
+});
 
 // UI actions
 btnHint.addEventListener('click', ()=>{ showHint = !showHint; redrawBackground(); });
