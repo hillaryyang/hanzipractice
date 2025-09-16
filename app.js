@@ -31,6 +31,8 @@ const modalClose = document.getElementById('modalClose');
 const charGrid = document.getElementById('charGrid');
 const modalTitle = document.getElementById('modalTitle');
 
+const btnShuffle = document.getElementById('btnShuffle');
+let isShuffled = false;
 
 // Canvas setup
 const board = document.getElementById('board');
@@ -89,7 +91,7 @@ deckSelector.addEventListener('change', async (e) => {
 
         // Update current deck
         currentDeckName = selectedDeck;
-        DECK = CHARACTER_DECKS[currentDeckName] || [];
+        processDeck();
         current = 0;
 
         if (DECK.length > 0) {
@@ -338,7 +340,37 @@ function closeModal() {
     charModal.classList.add('hidden');
 }
 
+// Standard Fisher-Yates shuffle algorithm to randomize an array
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// This function will set the DECK to be either ordered or shuffled
+function processDeck() {
+    const originalDeck = CHARACTER_DECKS[currentDeckName] || [];
+    if (isShuffled) {
+        DECK = [...originalDeck]; // Create a shuffled copy
+        shuffleArray(DECK);
+    } else {
+        DECK = originalDeck; // Use the original ordered deck
+    }
+}
+
+// This runs when the shuffle button is clicked
+function toggleShuffle() {
+    isShuffled = !isShuffled; // Flip the state
+    btnShuffle.classList.toggle('active', isShuffled); // Update button style
+    localStorage.setItem('hanziShuffleState', isShuffled); // Save preference
+
+    processDeck(); // Re-process the deck (shuffle or un-shuffle)
+    setEntry(0); // Go to the first character of the new order
+}
+
 btnShowAll.addEventListener('click', openModal);
+btnShuffle.addEventListener('click', toggleShuffle);
 
 modalClose.addEventListener('click', closeModal);
 charModal.addEventListener('click', (e) => {
@@ -412,6 +444,12 @@ window.addEventListener('load', async () => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateUndoButton();
+
+    const savedShuffleState = localStorage.getItem('hanziShuffleState') === 'true';
+    if (savedShuffleState) {
+        isShuffled = true;
+        btnShuffle.classList.add('active');
+    }
 
     // LOAD PROGRESS LOGIC
     const savedProgressJSON = localStorage.getItem('hanziPracticeProgress');

@@ -401,3 +401,9 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
   border-color: var(--accent);
   background: var(--grid);
 }
+
+/* Style for active shuffle button */
+.theme-toggle.active {
+  color: var(--accent);
+  background: var(--grid);
+}
