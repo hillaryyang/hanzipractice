@@ -34,16 +34,6 @@ const modalTitle = document.getElementById('modalTitle');
 const btnShuffle = document.getElementById('btnShuffle');
 let isShuffled = false;
 
-// pen select
-const penSelector = document.querySelector('.pen-selector');
-let currentPen = 'fine_pen';
-
-const PEN_TYPES = {
-  fine_pen: { baseWidth: 3, colorVar: '--text', lineCap: 'round', pressureFactor: 0.6 },
-  marker:   { baseWidth: 12, colorVar: '--bad', lineCap: 'butt', pressureFactor: 0.2 },
-  brush:    { baseWidth: 6, colorVar: '--text', lineCap: 'round', pressureFactor: 1.2 }
-};
-
 // Canvas setup
 const board = document.getElementById('board');
 const bgLayer = document.getElementById('bgLayer'); // grid + (optional) outline
@@ -269,10 +259,6 @@ function saveProgress() {
     console.log('Progress saved:', progress);
 }
 
-function getCssVariable(variableName) {
-    return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
-}
-
 // Drawing handlers (pointer events)
 function toCanvasPoint(ev, target) {
     const rect = target.getBoundingClientRect();
@@ -310,18 +296,15 @@ function pointerMove(ev) {
         last = null;
         return;
     }
-    
+
     const pt = toCanvasPoint(ev, drawLayer);
     const pressure = Math.max(0.2, ev.pressure || 0.5);
-    const pen = PEN_TYPES[currentPen];
-
-    // Calculate line width based on pen type and pressure
-    const baseWidth = pen.baseWidth * dpr;
-    const dynamicWidth = baseWidth * pressure * pen.pressureFactor;
-    drawCtx.lineWidth = baseWidth + dynamicWidth;
-
-    // Set color from the selected pen type
-    drawCtx.strokeStyle = getCssVariable(pen.colorVar);
+    drawCtx.lineWidth = penWidth * dpr * (0.6 + pressure * 0.8);
+    
+    // Use the theme's main text color for the ink
+    const styles = getComputedStyle(document.documentElement);
+    const inkColor = styles.getPropertyValue('--text').trim();
+    drawCtx.strokeStyle = inkColor;
 
     drawCtx.beginPath();
     drawCtx.moveTo(last.x, last.y);
@@ -390,22 +373,6 @@ function toggleShuffle() {
 
 btnShowAll.addEventListener('click', openModal);
 btnShuffle.addEventListener('click', toggleShuffle);
-penSelector.addEventListener('click', (e) => {
-    const targetButton = e.target.closest('button.pen-tool');
-    if (targetButton && targetButton.dataset.pen) {
-        currentPen = targetButton.dataset.pen;
-
-        // Update active button style
-        penSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-        targetButton.classList.add('active');
-
-        // Update canvas context properties
-        drawCtx.lineCap = PEN_TYPES[currentPen].lineCap;
-
-        // Save preference
-        localStorage.setItem('hanziPenType', currentPen);
-    }
-});
 
 modalClose.addEventListener('click', closeModal);
 charModal.addEventListener('click', (e) => {
@@ -484,18 +451,6 @@ window.addEventListener('load', async () => {
     if (savedShuffleState) {
         isShuffled = true;
         btnShuffle.classList.add('active');
-    }
-
-    const savedPen = localStorage.getItem('hanziPenType');
-    if (savedPen && PEN_TYPES[savedPen]) {
-        currentPen = savedPen;
-        penSelector.querySelectorAll('button').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.pen === savedPen);
-        });
-    }
-    // Set initial canvas context from the loaded (or default) pen
-    if (drawCtx) {
-        drawCtx.lineCap = PEN_TYPES[currentPen].lineCap;
     }
 
     // LOAD PROGRESS LOGIC
