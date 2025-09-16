@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Hanzi Practice</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0e12;           /* page background */
+      --panel:#11151b;        /* card/panel */
+      --muted:#a8b3cf;        /* secondary text */
+      --text:#e7ecf5;         /* main text */
+      --accent:#67e8f9;       /* cyan */
+      --accent-2:#22d3ee;
+      --good:#34d399;         /* green */
+      --warn:#f59e0b;         /* amber */
+      --bad:#f87171;          /* red */
+      --btn:#0f1720;
+      --grid:#1b2330;
+      --grid-strong:#263141;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background:var(--bg); color:var(--text);
+    }
+    .app{display:flex; gap:20px; padding:20px; height:100%; max-height:100vh}
+    aside{width:360px; background:var(--panel); border-radius:16px; padding:16px 16px; display:flex; flex-direction:column; gap:16px}
+    .char-head{display:flex; align-items:center; gap:12px}
+    .big-char{font-family:"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", STHeiti, system-ui, sans-serif; font-size:44px; line-height:1; background:#0f1319; border:1px solid #1d2632; border-radius:12px; width:64px; height:64px; display:grid; place-items:center}
+    .pinyin{background:#0f1319; border:1px solid #1d2632; padding:6px 10px; border-radius:999px; font-weight:600; color:#cfe7ff}
+    .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    .stat{background:#0f1319; border:1px solid #1d2632; border-radius:12px; padding:12px}
+    .stat .label{font-size:12px; color:var(--muted); letter-spacing:.02em}
+    .stat .value{font-weight:700; font-size:18px; margin-top:4px}
+    .example{background:#0f1319; border:1px solid #1d2632; border-radius:12px; padding:12px}
+    .example .en{color:var(--muted); font-size:14px}
+    .btn-row{display:flex; gap:10px}
+    button{appearance:none; border:1px solid #263141; background:var(--btn); color:var(--text); border-radius:12px; padding:10px 14px; font-weight:600; cursor:pointer}
+    button:hover{border-color:#334155}
+    button.primary{background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:#05222b; border:none}
+    button.ghost{background:#0f1319}
+    button.small{padding:6px 10px; font-size:13px; border-radius:10px}
+
+    main{flex:1; background:var(--panel); border-radius:16px; padding:16px; display:flex; flex-direction:column}
+    .board-wrap{position:relative; flex:1; border-radius:12px; overflow:hidden; border:1px solid #1d2632; background:#0b1016}
+    /* grid background */
+    .grid-bg{position:absolute; inset:0; background-image:linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size:40px 40px; background-position: center center}
+    .grid-bg::after{content:""; position:absolute; inset:0; background-image:linear-gradient(var(--grid-strong) 2px,transparent 2px), linear-gradient(90deg,var(--grid-strong) 2px, transparent 2px); background-size:200px 200px; mix-blend-mode:screen; opacity:.8}
+
+    canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
+    #bgLayer{z-index:1}
+    #drawLayer{z-index:2}
+
+    .toolbar{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px}
+    .left-tools, .right-tools{display:flex; gap:10px; align-items:center}
+    .status{font-weight:700}
+    .score{padding:6px 10px; border-radius:999px; border:1px solid #223042; background:#0d1420; font-weight:800}
+
+    .hint-pill{font-size:12px; color:#a8b3cf}
+    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0b121b; border:1px solid #223042; padding:2px 6px; border-radius:6px; font-size:12px; color:#cbd5e1}
+
+    @media (max-width: 980px){
+      .app{flex-direction:column}
+      aside{width:auto}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="char-head">
+        <div class="big-char" id="bigChar">学</div>
+        <div class="pinyin" id="pinyin">xué</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat"><div class="label">Meaning</div><div class="value" id="meaning">to study; learn</div></div>
+        <div class="stat"><div class="label">HSK</div><div class="value" id="hsk">1</div></div>
+        <div class="stat"><div class="label">Strokes</div><div class="value" id="strokes">8</div></div>
+        <div class="stat"><div class="label">Radical</div><div class="value" id="radical">⺍ + 子</div></div>
+      </div>
+
+      <div class="example">
+        <div class="label">Example</div>
+        <div class="zh" id="exZh">我学中文。</div>
+        <div class="en" id="exEn">I study Chinese.</div>
+      </div>
+
+      <div class="btn-row">
+        <button id="btnStroke" title="Open a stroke order search" class="ghost">▶ Stroke order</button>
+        <button id="btnHint" class="ghost">💡 Hint</button>
+      </div>
+
+      <div class="hint-pill">Tip: hold <span class="kbd">H</span> to peek the outline, <span class="kbd">⌫</span> to clear, arrows for next/prev.</div>
+    </aside>
+
+    <main>
+      <div class="board-wrap" id="board">
+        <div class="grid-bg"></div>
+        <canvas id="bgLayer"></canvas>
+        <canvas id="drawLayer"></canvas>
+      </div>
+
+      <div class="toolbar">
+        <div class="left-tools">
+          <button id="btnCheck" class="primary">✔ Check</button>
+          <button id="btnClear">🧹 Clear</button>
+        </div>
+        <div class="right-tools">
+          <button id="btnPrev">⏮ Prev</button>
+          <button id="btnNext">⏭ Next</button>
+          <div class="score" id="score">Score: —</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+/* =====================
+   Minimal Hanzi practice
+   Single-file app for GitHub Pages
+   — Features —
+   • Apple Pencil / touch / mouse drawing
+   • Hint overlay (hold H or toggle)
+   • “Check” compares your ink to a bold glyph mask
+   • Next/Prev through a small built-in deck (editable)
+   • Works completely offline on GH Pages (no build tools)
+===================== */
+
+// --- Character deck (edit/add as you like) ---
+const DECK = [
+  {
+    char: "学", pinyin: "xué", meaning: "to study; learn", hsk: 1, strokes: 8,
+    radical: "⺍ + 子", exampleZh: "我学中文。", exampleEn: "I study Chinese.",
+    hint: "Top cover with three dots; ‘子’ (child) at the bottom."
+  },
+  {
+    char: "人", pinyin: "rén", meaning: "person", hsk: 1, strokes: 2,
+    radical: "人", exampleZh: "我们是好人。", exampleEn: "We are good people.",
+    hint: "Two strokes forming a walking person; left slants first."
+  },
+  {
+    char: "你", pinyin: "nǐ", meaning: "you", hsk: 1, strokes: 7,
+    radical: "亻", exampleZh: "你好吗？", exampleEn: "How are you?",
+    hint: "Left side ‘亻’, right side ‘尔’. Left-to-right."
+  },
+  {
+    char: "我", pinyin: "wǒ", meaning: "I; me", hsk: 1, strokes: 7,
+    radical: "戈", exampleZh: "我是学生。", exampleEn: "I am a student.",
+    hint: "Think ‘hand’ holding a ‘spear’. Center cross first."
+  },
+  {
+    char: "中", pinyin: "zhōng", meaning: "middle; center", hsk: 1, strokes: 4,
+    radical: "丨", exampleZh: "中国", exampleEn: "China",
+    hint: "Box ‘口’ with a vertical through the center."
+  },
+  {
+    char: "国", pinyin: "guó", meaning: "country; nation", hsk: 1, strokes: 8,
+    radical: "囗", exampleZh: "美国", exampleEn: "USA",
+    hint: "Outer enclosure with ‘玉/王’ inside (dot on top-left)."
+  }
+];
+
+// DOM
+const bigChar = document.getElementById('bigChar');
+const pinyin  = document.getElementById('pinyin');
+const meaning = document.getElementById('meaning');
+const hsk     = document.getElementById('hsk');
+const strokes = document.getElementById('strokes');
+const radical = document.getElementById('radical');
+const exZh    = document.getElementById('exZh');
+const exEn    = document.getElementById('exEn');
+const btnStroke = document.getElementById('btnStroke');
+const btnHint   = document.getElementById('btnHint');
+const btnCheck  = document.getElementById('btnCheck');
+const btnClear  = document.getElementById('btnClear');
+const btnPrev   = document.getElementById('btnPrev');
+const btnNext   = document.getElementById('btnNext');
+const scoreEl   = document.getElementById('score');
+
+// Canvas setup
+const board    = document.getElementById('board');
+const bgLayer  = document.getElementById('bgLayer');   // grid + (optional) outline
+const drawLayer= document.getElementById('drawLayer'); // user ink only
+let bgCtx, drawCtx;
+let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+// Offscreen mask for scoring
+let maskCanvas = document.createElement('canvas');
+let maskCtx    = maskCanvas.getContext('2d', { willReadFrequently: true });
+
+let current = 0;           // index in DECK
+let showHint = false;      // toggle
+let drawing = false;       // drawing state
+let last = null;           // last point
+let penWidth = 6;          // base width (scaled by pressure)
+
+function resizeCanvases(){
+  const rect = board.getBoundingClientRect();
+  const W = Math.floor(rect.width  * dpr);
+  const H = Math.floor(rect.height * dpr);
+
+  for (const c of [bgLayer, drawLayer, maskCanvas]){
+    c.width = W; c.height = H;
+    c.style.width = rect.width + 'px';
+    c.style.height= rect.height + 'px';
+  }
+  bgCtx   = bgLayer.getContext('2d');
+  drawCtx = drawLayer.getContext('2d');
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin= 'round';
+
+  redrawBackground();
+  drawMaskForChar(DECK[current]);
+}
+
+function redrawBackground(){
+  const ctx = bgCtx; const W = bgLayer.width, H = bgLayer.height;
+  ctx.clearRect(0,0,W,H);
+  if (showHint){
+    // faint character outline for guidance
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    drawGlyph(ctx, DECK[current].char, W, H, true);
+    ctx.restore();
+  }
+}
+
+function drawMaskForChar(entry){
+  const W = maskCanvas.width, H = maskCanvas.height;
+  maskCtx.clearRect(0,0,W,H);
+  drawGlyph(maskCtx, entry.char, W, H, false);
+}
+
+// Draws a big centered glyph into the given context.
+// If outline==true, we stroke instead of fill (for nicer hint).
+function drawGlyph(ctx, char, W, H, outline){
+  ctx.save();
+  const pad = Math.min(W,H) * 0.12;   // inner padding
+  const size = Math.min(W,H) - pad*2; // font size in pixels
+  ctx.translate(W/2, H/2);
+  ctx.fillStyle = '#7f8ea3';
+  ctx.strokeStyle = '#7f8ea3';
+  // Use a heavy weight for a thicker mask band to be forgiving
+  ctx.font = `900 ${size}px \"Noto Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", STHeiti, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if (outline){
+    ctx.lineWidth = Math.max(4, size * 0.02);
+    ctx.strokeText(char, 0, 0);
+  }else{
+    ctx.fillText(char, 0, 0);
+  }
+  ctx.restore();
+}
+
+function setEntry(i){
+  current = (i + DECK.length) % DECK.length;
+  const e = DECK[current];
+  bigChar.textContent = e.char; pinyin.textContent = e.pinyin;
+  meaning.textContent = e.meaning; hsk.textContent = e.hsk;
+  strokes.textContent = e.strokes; radical.textContent = e.radical || '—';
+  exZh.textContent = e.exampleZh; exEn.textContent = e.exampleEn;
+  clearInk();
+  redrawBackground();
+  drawMaskForChar(e);
+  scoreEl.textContent = 'Score: —';
+}
+
+function clearInk(){
+  drawCtx.clearRect(0,0,drawLayer.width,drawLayer.height);
+}
+
+// Drawing handlers (pointer events)
+function toCanvasPoint(ev, target){
+  const rect = target.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) * dpr;
+  const y = (ev.clientY - rect.top)  * dpr;
+  return {x,y};
+}
+
+function pointerDown(ev){
+  drawing = true; drawLayer.setPointerCapture(ev.pointerId);
+  last = toCanvasPoint(ev, drawLayer);
+}
+function pointerMove(ev){
+  if (!drawing) return;
+  const pt = toCanvasPoint(ev, drawLayer);
+  const pressure = Math.max(0.2, ev.pressure || 0.5);
+  drawCtx.lineWidth = penWidth * dpr * (0.6 + pressure*0.8);
+  drawCtx.strokeStyle = '#dbeafe';
+  drawCtx.beginPath();
+  drawCtx.moveTo(last.x, last.y);
+  drawCtx.lineTo(pt.x, pt.y);
+  drawCtx.stroke();
+  last = pt;
+}
+function pointerUp(ev){
+  drawing = false; last = null;
+}
+
+// Compare the ink layer against the mask
+function checkScore(){
+  const W = drawLayer.width, H = drawLayer.height;
+  const user = drawCtx.getImageData(0,0,W,H).data;
+  const mask = maskCtx.getImageData(0,0,W,H).data;
+  let userOn=0, overlap=0, maskOn=0;
+
+  // sample every n pixels for speed
+  const step = 2 * 4; // 2px stride * 4 channels
+  for (let i=0;i<user.length;i+=step){
+    const aU = user[i+3];             // alpha of user ink
+    const aM = mask[i+3];             // alpha of mask glyph
+    if (aU>20){ userOn++; }
+    if (aM>10){ maskOn++; }
+    if (aU>20 && aM>10){ overlap++; }
+  }
+  if (userOn===0){ scoreEl.textContent = 'Score: 0 — draw something first!'; return; }
+  // overlap ratio (precision) and coverage ratio (recall vs mask)
+  const precision = overlap / userOn;            // how much of what you drew hits the target
+  const recall    = overlap / Math.max(1, maskOn); // how much of the character you covered
+  // Weighted F1-like score
+  const score = Math.round(100 * (2 * precision * recall) / Math.max(1e-6, (precision + recall)));
+  let tag = score>=85 ? 'Great! ✅' : score>=65 ? 'Nice! 👍' : score>=45 ? 'Keep going 💪' : 'Try again 🙂';
+  scoreEl.textContent = `Score: ${score} — ${tag}`;
+}
+
+// UI actions
+btnHint.addEventListener('click', ()=>{ showHint = !showHint; redrawBackground(); });
+btnCheck.addEventListener('click', checkScore);
+btnClear.addEventListener('click', clearInk);
+btnPrev.addEventListener('click', ()=> setEntry(current-1));
+btnNext.addEventListener('click', ()=> setEntry(current+1));
+
+btnStroke.addEventListener('click', ()=>{
+  const c = DECK[current].char;
+  const q = encodeURIComponent(`${c} stroke order`);
+  window.open(`https://www.google.com/search?q=${q}`, '_blank');
+});
+
+// Keyboard shortcuts
+window.addEventListener('keydown', (e)=>{
+  if (e.key === 'h' || e.key === 'H'){ showHint = true; redrawBackground(); }
+  if (e.key === 'Backspace'){ e.preventDefault(); clearInk(); }
+  if (e.key === 'ArrowLeft'){ setEntry(current-1); }
+  if (e.key === 'ArrowRight'){ setEntry(current+1); }
+  if (e.key === 'Enter'){ checkScore(); }
+});
+window.addEventListener('keyup', (e)=>{
+  if (e.key === 'h' || e.key === 'H'){ showHint = false; redrawBackground(); }
+});
+
+// Pointer events
+['pointerdown','pointermove','pointerup','pointercancel','pointerleave'].forEach(type=>{
+  drawLayer.addEventListener(type, (ev)=>{
+    if (type==='pointerdown') pointerDown(ev);
+    else if (type==='pointermove') pointerMove(ev);
+    else pointerUp(ev);
+  }, {passive:false});
+});
+
+// Init
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+setEntry(0);
+
+</script>
+</body>
+</html>
