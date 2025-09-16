@@ -411,12 +411,21 @@ window.addEventListener('keyup', (e)=>{
 
 // Init
 window.addEventListener('resize', resizeCanvases);
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => { // Make this function async
   resizeCanvases();
+  
   // Initialize theme
   const savedTheme = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
   updateUndoButton();
+
+  // Now, safely load the initial HSK 1 deck
+  // The 'hskDataLoaded' event will handle displaying the character
+  try {
+    await window.loadHSKLevel(1);
+  } catch (error) {
+    console.error("Failed to load initial HSK 1 deck:", error);
+  }
 });
 
 </script>

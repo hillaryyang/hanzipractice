@@ -156,15 +156,6 @@ async function preloadAllHSKLevels() {
   }
 }
 
-// Auto-load HSK 1 and 2 on script load
-(async function() {
-  await loadHSKLevel(1);
-  await loadHSKLevel(2);
-  
-  // Optionally preload other levels in the background
-  setTimeout(() => preloadAllHSKLevels(), 1000);
-})();
-
 // Export for use in main app
 window.CHARACTER_DECKS = CHARACTER_DECKS;
 window.loadHSKLevel = loadHSKLevel;
