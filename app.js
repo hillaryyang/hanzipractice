@@ -390,7 +390,6 @@ charGrid.addEventListener('click', (e) => {
     }
 });
 
-
 // UI actions
 btnHint.addEventListener('click', () => { showHint = !showHint;
     redrawBackground(); });
@@ -463,15 +462,13 @@ window.addEventListener('load', async () => {
             console.log('Found saved progress:', savedProgress);
 
             if (savedProgress.deckName && typeof savedProgress.charIndex === 'number') {
-                // Set the dropdown to the correct deck
                 deckSelector.value = savedProgress.deckName;
                 currentDeckName = savedProgress.deckName;
                 const level = savedProgress.deckName.split(' ')[1];
 
-                // Load the deck data
                 await window.loadHSKLevel(parseInt(level));
+                processDeck(); // <-- ADD THIS LINE
 
-                // Once loaded, jump to the specific character
                 setEntry(savedProgress.charIndex);
                 progressLoaded = true;
             }
@@ -484,6 +481,7 @@ window.addEventListener('load', async () => {
     if (!progressLoaded) {
         try {
             await window.loadHSKLevel(1);
+            processDeck(); // <-- AND ADD THIS LINE
         } catch (error) {
             console.error("Failed to load initial HSK 1 deck:", error);
         }
