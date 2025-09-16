@@ -39,8 +39,7 @@
     .example{background:#0f1319; border:1px solid #1d2632; border-radius:12px; padding:12px}
     .example .en{color:var(--muted); font-size:14px}
     .btn-row{display:flex; gap:10px}
-    button{appearance:none; border:1px solid #263141; background:var(--btn); color:var(--text); border-radius:12px; padding:10px 14px; font-weight:600; cursor:pointer}
-    button:hover{border-color:#334155}
+    button{appearance:none; border:1px solid #263141; background:var(--btn); color:var(--text); border-radius:12px; padding:10px 14px; font-weight:600; cursor:pointer; font-size:16px}    button:hover{border-color:#334155}
     button.primary{background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:#05222b; border:none}
     button.ghost{background:#0f1319}
     button.small{padding:6px 10px; font-size:13px; border-radius:10px}
@@ -94,7 +93,6 @@
     .toolbar{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px}
     .left-tools, .right-tools{display:flex; gap:10px; align-items:center}
     .status{font-weight:700}
-    .score{padding:6px 10px; border-radius:999px; border:1px solid #223042; background:#0d1420; font-weight:800}
 
     .hint-pill{font-size:12px; color:#a8b3cf}
     .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0b121b; border:1px solid #223042; padding:2px 6px; border-radius:6px; font-size:12px; color:#cbd5e1}
@@ -143,13 +141,12 @@
 
       <div class="toolbar">
         <div class="left-tools">
-          <button id="btnCheck" class="primary">✔ Check</button>
-          <button id="btnClear">🧹 Clear</button>
+          <button id="btnCheck" class="primary">Check</button>
+          <button id="btnClear"> Clear</button>
         </div>
         <div class="right-tools">
-          <button id="btnPrev">⏮ Prev</button>
+          <button id="btnPrev">⏮ Prev </button>
           <button id="btnNext">⏭ Next</button>
-          <div class="score" id="score">Score: —</div>
         </div>
       </div>
     </main>
@@ -216,7 +213,6 @@ const btnCheck  = document.getElementById('btnCheck');
 const btnClear  = document.getElementById('btnClear');
 const btnPrev   = document.getElementById('btnPrev');
 const btnNext   = document.getElementById('btnNext');
-const scoreEl   = document.getElementById('score');
 
 // Canvas setup
 const board    = document.getElementById('board');
@@ -304,7 +300,6 @@ function setEntry(i){
   clearInk();
   redrawBackground();
   drawMaskForChar(e);
-  scoreEl.textContent = 'Score: —';
 }
 
 function clearInk(){
@@ -362,35 +357,8 @@ function pointerUp(ev){
   drawing = false; last = null;
 }
 
-// Compare the ink layer against the mask
-function checkScore(){
-  const W = drawLayer.width, H = drawLayer.height;
-  const user = drawCtx.getImageData(0,0,W,H).data;
-  const mask = maskCtx.getImageData(0,0,W,H).data;
-  let userOn=0, overlap=0, maskOn=0;
-
-  // sample every n pixels for speed
-  const step = 2 * 4; // 2px stride * 4 channels
-  for (let i=0;i<user.length;i+=step){
-    const aU = user[i+3];             // alpha of user ink
-    const aM = mask[i+3];             // alpha of mask glyph
-    if (aU>20){ userOn++; }
-    if (aM>10){ maskOn++; }
-    if (aU>20 && aM>10){ overlap++; }
-  }
-  if (userOn===0){ scoreEl.textContent = 'Score: 0 — draw something first!'; return; }
-  // overlap ratio (precision) and coverage ratio (recall vs mask)
-  const precision = overlap / userOn;            // how much of what you drew hits the target
-  const recall    = overlap / Math.max(1, maskOn); // how much of the character you covered
-  // Weighted F1-like score
-  const score = Math.round(100 * (2 * precision * recall) / Math.max(1e-6, (precision + recall)));
-  let tag = score>=85 ? 'Great! ✅' : score>=65 ? 'Nice! 👍' : score>=45 ? 'Keep going 💪' : 'Try again 🙂';
-  scoreEl.textContent = `Score: ${score} — ${tag}`;
-}
-
 // UI actions
 btnHint.addEventListener('click', ()=>{ showHint = !showHint; redrawBackground(); });
-btnCheck.addEventListener('click', checkScore);
 btnClear.addEventListener('click', clearInk);
 btnPrev.addEventListener('click', ()=> setEntry(current-1));
 btnNext.addEventListener('click', ()=> setEntry(current+1));
@@ -407,7 +375,6 @@ window.addEventListener('keydown', (e)=>{
   if (e.key === 'Backspace'){ e.preventDefault(); clearInk(); }
   if (e.key === 'ArrowLeft'){ setEntry(current-1); }
   if (e.key === 'ArrowRight'){ setEntry(current+1); }
-  if (e.key === 'Enter'){ checkScore(); }
 });
 window.addEventListener('keyup', (e)=>{
   if (e.key === 'h' || e.key === 'H'){ showHint = false; redrawBackground(); }
