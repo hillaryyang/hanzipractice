@@ -432,3 +432,7 @@ body, aside {
   -ms-user-select: none;     /* For IE/Edge */
   user-select: none;         /* Standard */
 }
+
+/* Safari/iPad Pencil hygiene */
+canvas { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+html, body { touch-action: none; } /* we already disable on canvas; this helps around edges */

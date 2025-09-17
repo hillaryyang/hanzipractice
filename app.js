@@ -51,6 +51,55 @@ let drawing = false; // drawing state
 let last = null; // last point
 let penWidth = 10; // base width (scaled by pressure)
 let undoStack = [];
+// Drawing queue + RAF batching for smoother ink on high-frequency/stylus input
+let pointQueue = [];
+let drawPending = false;
+let lastPoint = null; // structured point with x,y,pressure,time
+let lastMid = null;   // midpoint used for quadratic smoothing
+
+// ---- Brush plumbing helpers ----
+const BRUSH = {
+  spacing: 1.6,        // px between stamps (before multiplying by dpr)
+  minSize: 2.0,        // base radius at dpr=1
+  maxSize: 14.0,
+  tiltEllipticity: 0.55,
+  opacity: 1.0,
+};
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const lerp  = (a, b, t) => a + (b - a) * t;
+
+function normalizePressure(ev, lastPt) {
+  let p = (typeof ev.pressure === 'number' && ev.pressure > 0)
+            ? ev.pressure
+            : (ev.force || 0);
+  if (!p || p <= 0.05) {
+    if (lastPt) {
+      const dt = Math.max(1, ev.timeStamp - lastPt.time);
+      const dx = ev.clientX - lastPt.cx, dy = ev.clientY - lastPt.cy;
+      const v = Math.hypot(dx, dy) / dt;                // px/ms
+      p = clamp(1 - Math.min(v / 2, 0.95), 0.08, 0.95); // slower => thicker
+    } else {
+      p = 0.6;
+    }
+  }
+  return p;
+}
+
+function collectPoints(fromEvents) {
+  for (const e of fromEvents) {
+    const pt = toCanvasPoint(e, drawLayer);
+    const pressure = normalizePressure(e, lastPoint);
+    const altitude = typeof e.altitudeAngle === 'number' ? e.altitudeAngle : null;
+    const azimuth  = typeof e.azimuthAngle  === 'number' ? e.azimuthAngle  : null;
+    pointQueue.push({
+      x: pt.x, y: pt.y, pressure, time: Date.now(),
+      altitude, azimuth,
+      cx: e.clientX, cy: e.clientY, // keep client coords for velocity sim
+    });
+    lastPoint = { ...pointQueue[pointQueue.length - 1] };
+  }
+}
 
 // Event listener for HSK data loaded
 window.addEventListener('hskDataLoaded', (event) => {
@@ -262,66 +311,109 @@ function saveProgress() {
 // Drawing handlers (pointer events)
 function toCanvasPoint(ev, target) {
     const rect = target.getBoundingClientRect();
-    const x = (ev.clientX - rect.left) * dpr;
-    const y = (ev.clientY - rect.top) * dpr;
+    // Support both PointerEvent-like objects and touch-like objects
+    const clientX = ev.clientX != null ? ev.clientX : (ev.pageX || 0);
+    const clientY = ev.clientY != null ? ev.clientY : (ev.pageY || 0);
+    const x = (clientX - rect.left) * dpr;
+    const y = (clientY - rect.top) * dpr;
     return { x, y };
 }
 
 function pointerDown(ev) {
-    if (ev.pointerType === 'touch') {
-        return;
-    }
+  const pType = ev.pointerType || 'pen';
+  if (pType === 'touch' && ev.isPrimary === false) return;
+  ev.preventDefault();
 
-    ev.preventDefault();
+  saveCanvasState();
+  drawing = true;
+  try { drawLayer.setPointerCapture && drawLayer.setPointerCapture(ev.pointerId); } catch {}
 
-    const rect = drawLayer.getBoundingClientRect();
-    const x = ev.clientX - rect.left;
-    const y = ev.clientY - rect.top;
-
-    // Check if click is within the 20px margin (inner drawing area)
-    if (x < 20 || y < 20 || x > rect.width - 20 || y > rect.height - 20) {
-        return; // Don't start drawing outside the inner area
-    }
-
-    saveCanvasState();
-
-    drawing = true;
-    drawLayer.setPointerCapture(ev.pointerId);
-    last = toCanvasPoint(ev, drawLayer);
+  pointQueue = [];
+  last = null;
+  lastPoint = { cx: ev.clientX, cy: ev.clientY, time: ev.timeStamp };
+  collectPoints([ev]);
+  if (!drawPending) { drawPending = true; requestAnimationFrame(processPointQueue); }
 }
 
 function pointerMove(ev) {
-    if (!drawing || !drawCtx) return;
+  if (!drawing) return;
+  ev.preventDefault();
 
-    const rect = drawLayer.getBoundingClientRect();
-    const x = ev.clientX - rect.left;
-    const y = ev.clientY - rect.top;
-
-    if (x < 20 || y < 20 || x > rect.width - 20 || y > rect.height - 20) {
-        drawing = false;
-        last = null;
-        return;
-    }
-
-    const pt = toCanvasPoint(ev, drawLayer);
-    const pressure = Math.max(0.2, ev.pressure || 0.5);
-    drawCtx.lineWidth = penWidth * dpr * (0.6 + pressure * 0.8);
-    
-    // Use the theme's main text color for the ink
-    const styles = getComputedStyle(document.documentElement);
-    const inkColor = styles.getPropertyValue('--text').trim();
-    drawCtx.strokeStyle = inkColor;
-
-    drawCtx.beginPath();
-    drawCtx.moveTo(last.x, last.y);
-    drawCtx.lineTo(pt.x, pt.y);
-    drawCtx.stroke();
-    last = pt;
+  const coalesced = (typeof ev.getCoalescedEvents === 'function') ? ev.getCoalescedEvents() : null;
+  collectPoints(coalesced && coalesced.length ? coalesced : [ev]);
+  if (!drawPending) { drawPending = true; requestAnimationFrame(processPointQueue); }
 }
 
 function pointerUp(ev) {
-    drawing = false;
-    last = null;
+  drawing = false;
+  last = null;
+  pointQueue = [];
+  drawPending = false;
+  try { drawLayer.releasePointerCapture && drawLayer.releasePointerCapture(ev.pointerId); } catch {}
+}
+
+// RAF-driven processor for queued points
+function processPointQueue() {
+  drawPending = false;
+  if (!drawCtx || pointQueue.length === 0) return;
+
+  // Ink color from theme
+  const styles = getComputedStyle(document.documentElement);
+  const inkColor = styles.getPropertyValue('--text').trim();
+  drawCtx.fillStyle = inkColor;
+  drawCtx.globalAlpha = BRUSH.opacity;
+
+  const spacing = BRUSH.spacing * dpr;
+
+  while (pointQueue.length) {
+    const p = pointQueue.shift();
+
+    if (!last) {
+      last = { x: p.x, y: p.y };
+      stamp(p.x, p.y, p.pressure, p.altitude, p.azimuth);
+      continue;
+    }
+
+    const dx = p.x - last.x, dy = p.y - last.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.001) { continue; }
+
+    const steps = Math.max(1, Math.floor(dist / spacing));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const x = last.x + dx * t;
+      const y = last.y + dy * t;
+      const pr = p.pressure;
+      stamp(x, y, pr, p.altitude, p.azimuth);
+    }
+
+    last = { x: p.x, y: p.y };
+  }
+
+  function stamp(x, y, pressure, altitude, azimuth) {
+    const min = BRUSH.minSize * dpr;
+    const max = BRUSH.maxSize * dpr;
+    const r = lerp(min, max, clamp(pressure, 0.0, 1.0));
+
+    if (typeof altitude === 'number' && typeof azimuth === 'number') {
+      // More tilt => more elongation
+      const tilt = clamp(1 - (altitude / (Math.PI / 2)), 0, 1);
+      const a = r * (1 + tilt * (1/BRUSH.tiltEllipticity - 1)); // major axis
+      const b = r * BRUSH.tiltEllipticity;                       // minor axis
+
+      drawCtx.save();
+      drawCtx.translate(x, y);
+      drawCtx.rotate(azimuth);
+      drawCtx.beginPath();
+      drawCtx.ellipse(0, 0, a, b, 0, 0, Math.PI * 2);
+      drawCtx.fill();
+      drawCtx.restore();
+    } else {
+      drawCtx.beginPath();
+      drawCtx.arc(x, y, r, 0, Math.PI * 2);
+      drawCtx.fill();
+    }
+  }
 }
 
 function populateCharGrid() {
@@ -435,12 +527,21 @@ window.addEventListener('keyup', (e) => {
 
 // Pointer events
 ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'pointerleave'].forEach(type => {
-    drawLayer.addEventListener(type, (ev) => {
-        if (type === 'pointerdown') pointerDown(ev);
-        else if (type === 'pointermove') pointerMove(ev);
-        else pointerUp(ev);
-    }, { passive: false });
+  drawLayer.addEventListener(type, (ev) => {
+    if (type === 'pointerdown') pointerDown(ev);
+    else if (type === 'pointermove') pointerMove(ev);
+    else pointerUp(ev);
+  }, { passive:false });
 });
+
+// Extra high-frequency updates on Safari (Apple Pencil)
+drawLayer.addEventListener('pointerrawupdate', (ev) => {
+  if (!drawing) return;
+  const coalesced = (typeof ev.getCoalescedEvents === 'function') ? ev.getCoalescedEvents() : null;
+  collectPoints(coalesced && coalesced.length ? coalesced : [ev]);
+  if (!drawPending) { drawPending = true; requestAnimationFrame(processPointQueue); }
+}, { passive:false });
+
 
 // Init
 window.addEventListener('resize', resizeCanvases);
