@@ -224,12 +224,14 @@ async function initCanvas(canvas) {
 	        const pad = Math.min(W, H) * 0.12; // inner padding
 	        const size = Math.min(W, H) - pad * 2; // font size in pixels
 	        gridCtx.translate(W / 2, H / 2);
-	        gridCtx.fillStyle = '#ffffff';	// Brighter hint color
+	        
+	        // Draw character outline instead of filled
+	        gridCtx.strokeStyle = 'rgba(103, 232, 249, 0.6)'; // Semi-transparent cyan outline
+	        gridCtx.lineWidth = 3;
 	        gridCtx.font = `900 ${size}px "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", STHeiti, sans-serif`;
 	        gridCtx.textAlign = 'center';
 	        gridCtx.textBaseline = 'middle';
-	        gridCtx.globalAlpha = 0.15;
-	        gridCtx.fillText(char, 0, 0);
+	        gridCtx.strokeText(char, 0, 0);
 	        gridCtx.restore();
 	    }
 	
