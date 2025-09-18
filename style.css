@@ -1,8 +1,8 @@
 :root{
   --bg:#0b0e12;           /* page background */
   --panel:#11151b;        /* card/panel */
-  --muted:#a8b3cf;        /* secondary text */
-  --text:#e7ecf5;         /* main text */
+  --muted:#b8c5e0;        /* secondary text - brighter */
+  --text:#ffffff;         /* main text - pure white */
   --accent:#67e8f9;       /* cyan */
   --accent-2:#22d3ee;
   --good:#34d399;         /* green */
@@ -66,6 +66,7 @@ aside{width:360px; background:var(--panel); border-radius:16px; padding:16px 16p
 .stat .label{font-size:12px; color:var(--muted); letter-spacing:.02em}
 .stat .value{font-weight:700; font-size:18px; margin-top:4px}
 .btn-row{display:flex; gap:10px}
+.progress-row{display:flex; justify-content:center; align-items:center; margin-top:8px}
 
 button{
   appearance:none;
@@ -79,8 +80,8 @@ button{
   font-size:14px
 }
 button:hover{border-color:var(--grid-strong)}
-button.primary{background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:#05222b; border:none}
-button.ghost{background:var(--btn)}
+button.primary{background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:var(--bg); border:none}
+button.ghost{background:var(--btn); font-size:13px; padding:8px 12px}
 button.small{padding:6px 10px; font-size:13px; border-radius:10px}
 
 main{
@@ -305,8 +306,58 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
   }
 }
 
+
+#brushSelector {
+    display: inline-block;
+    border: 1px solid var(--grid);
+    border-radius: 12px;
+    padding: 5px;
+}
+
+#brushSelector img {
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    margin: 2px;
+}
+
+#brushSelector img.selected {
+    border-color: var(--accent);
+}
+
+/* Invert brush images in dark mode for better visibility */
+body:not([data-theme="light"]) #brushSelector img {
+    filter: invert(1);
+}
+
 /* =========================================
-   Character Grid Modal Styles (NEW)
+   Mobile & Tablet Touch Styles
+   ========================================= */
+canvas#drawLayer {
+  /* This tells the browser to let our JavaScript
+     handle all touch actions on the canvas. */
+  touch-action: none;
+}
+
+body, aside {
+  -webkit-touch-callout: none;
+
+  /* These rules prevent text from being highlighted when you 
+     accidentally drag outside the canvas. */
+  -webkit-user-select: none; /* For Safari/Chrome */
+  -moz-user-select: none;    /* For Firefox */
+  -ms-user-select: none;     /* For IE/Edge */
+  user-select: none;         /* Standard */
+}
+
+/* Safari/iPad Pencil hygiene */
+canvas { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+html, body { touch-action: none; } /* we already disable on canvas; this helps around edges */
+
+/* =========================================
+   Character Grid Modal Styles
    ========================================= */
 .char-modal {
   position: fixed;
@@ -339,7 +390,7 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
   max-height: 600px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 .modal-header {
@@ -374,10 +425,9 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
 
 .char-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 10px;
   overflow-y: auto;
-  /* Add some padding for the scrollbar to prevent content overlap */
   padding-right: 10px;
 }
 
@@ -395,6 +445,7 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
   aspect-ratio: 1 / 1;
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s;
+  padding: 4px;
 }
 
 .char-grid-item:hover {
@@ -402,37 +453,22 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
   background: var(--grid);
 }
 
-/* Style for active shuffle button */
-.theme-toggle.active {
-  color: var(--accent);
-  background: var(--grid);
-}
-
-button.ghost.active {
-  color: var(--accent);
+.char-grid-item.current {
   border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 0 0 3px var(--accent), 0 0 20px rgba(103, 232, 249, 0.3);
+  transform: scale(1.05);
+  z-index: 10;
+  position: relative;
 }
 
-/* =========================================
-   Mobile & Tablet Touch Styles
-   ========================================= */
-canvas#drawLayer {
-  /* This tells the browser to let our JavaScript
-     handle all touch actions on the canvas. */
-  touch-action: none;
+.char-grid-item.current:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px var(--accent-2), 0 0 20px rgba(103, 232, 249, 0.5);
 }
 
-body, aside {
-  -webkit-touch-callout: none;
-
-  /* These rules prevent text from being highlighted when you 
-     accidentally drag outside the canvas. */
-  -webkit-user-select: none; /* For Safari/Chrome */
-  -moz-user-select: none;    /* For Firefox */
-  -ms-user-select: none;     /* For IE/Edge */
-  user-select: none;         /* Standard */
+.char-grid-item img {
+  border-radius: 4px;
 }
-
-/* Safari/iPad Pencil hygiene */
-canvas { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
-html, body { touch-action: none; } /* we already disable on canvas; this helps around edges */

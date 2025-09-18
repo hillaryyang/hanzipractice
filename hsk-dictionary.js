@@ -1,3 +1,6 @@
+// HSK Character Dictionary - Dynamic vocabulary loader for Chinese character practice
+// Based on https://github.com/drkameleon/complete-hsk-vocabulary
+
 // Dynamic HSK vocabulary loader
 let CHARACTER_DECKS = {
   "HSK 1": [],
@@ -59,8 +62,6 @@ function convertHSKEntry(entry) {
     exampleEn: ''  // No examples
   };
 }
-
-// Remove the example generation functions since we're not using them anymore
 
 // Function to load HSK level data
 async function loadHSKLevel(level) {
@@ -137,6 +138,18 @@ function getFallbackData(level) {
       { char: "办", pinyin: "bàn", meaning: "to handle", exampleZh: "", exampleEn: "" },
       { char: "半", pinyin: "bàn", meaning: "half", exampleZh: "", exampleEn: "" },
       { char: "帮", pinyin: "bāng", meaning: "to help", exampleZh: "", exampleEn: "" }
+    ],
+    3: [
+      { char: "包", pinyin: "bāo", meaning: "bag; to wrap", exampleZh: "", exampleEn: "" },
+      { char: "报", pinyin: "bào", meaning: "newspaper; to report", exampleZh: "", exampleEn: "" },
+      { char: "被", pinyin: "bèi", meaning: "by (passive voice)", exampleZh: "", exampleEn: "" },
+      { char: "比", pinyin: "bǐ", meaning: "to compare", exampleZh: "", exampleEn: "" }
+    ],
+    4: [
+      { char: "稳", pinyin: "wěn", meaning: "settled; steady; stable", exampleZh: "", exampleEn: "" },
+      { char: "承", pinyin: "chéng", meaning: "to bear; to carry", exampleZh: "", exampleEn: "" },
+      { char: "担", pinyin: "dān", meaning: "to carry; to shoulder", exampleZh: "", exampleEn: "" },
+      { char: "获", pinyin: "huò", meaning: "to obtain; to get", exampleZh: "", exampleEn: "" }
     ]
   };
   
@@ -159,3 +172,4 @@ async function preloadAllHSKLevels() {
 // Export for use in main app
 window.CHARACTER_DECKS = CHARACTER_DECKS;
 window.loadHSKLevel = loadHSKLevel;
+window.preloadAllHSKLevels = preloadAllHSKLevels;
