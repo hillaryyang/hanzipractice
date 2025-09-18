@@ -170,7 +170,7 @@ async function loadSettings() {
 		noFixedWidthFlag: await loadFromDB('noFixedWidthFlag', 'N') == 'Y',	// 比例寬輸出，預設為 N
 		saveAsTester: await loadFromDB('saveAsTester', 'Y') == 'Y', 		// 是否為測試輸出，預設為 Y
 		testSerialNo: await loadFromDB('testSerialNo', 1) * 1,				// 測試輸出序號，預設為 1
-		customGlyphs: await loadFromDB('customGlyphs')						// 自定義文字
+		customGlyphs: await loadFromDB('customGlyphs'),					// 自定義文字
 	};
 
 	if (settings.customGlyphs && settings.customGlyphs != '') {	// 如果有自定義文字，則添加到列表中
@@ -186,6 +186,20 @@ async function loadSettings() {
 
 	return settings;
 }
+
+// 儲存學習進度
+async function saveProgress(deckName, characterIndex) {
+	await saveToDB('lastDeck', deckName);
+	await saveToDB('lastCharacterIndex', characterIndex);
+}
+
+// 讀取學習進度
+async function loadProgress() {
+	const lastDeck = await loadFromDB('lastDeck', 'HSK 1');
+	const lastCharacterIndex = await loadFromDB('lastCharacterIndex', 0);
+	return { lastDeck, lastCharacterIndex: parseInt(lastCharacterIndex) };
+}
+
 
 async function updateSetting(key, value) {
 	if (settings == null) settings = await loadSettings();
@@ -382,18 +396,25 @@ $(document).ready(async function () {
                 // Set the dropdown to the current deck
                 $listSelect.val(deckName);
                 
-                // Set up the first character
+                // Set up the character from saved progress
                 nowList = hskGlyphList;
-                nowGlyphIndex = 0;
-                setGlyph(0);
+                // Get saved progress (we need to call loadProgress again since it's in the event handler)
+                loadProgress().then(progress => {
+                    const savedIndex = (progress.lastDeck === deckName) ? progress.lastCharacterIndex : 0;
+                    const validIndex = Math.max(0, Math.min(savedIndex, hskGlyphList.length - 1));
+                    nowGlyphIndex = validIndex;
+                    setGlyph(validIndex);
+                });
                 
                 // Update reference implementation DECK
                 updateDeckFromHSK();
             }
         });
 
-        // Now load HSK data after event listener is set up
-        await window.loadHSKLevel(1);
+        // Load saved progress and initialize with the last deck and character
+        const savedProgress = await loadProgress();
+        const levelToLoad = parseInt(savedProgress.lastDeck.split(' ')[1]) || 1;
+        await window.loadHSKLevel(levelToLoad);
 		
 		// 初始化筆壓繪圖狀態
 		await updatePressureDrawingStatus();
@@ -439,11 +460,13 @@ $(document).ready(async function () {
             await window.loadHSKLevel(parseInt(level));
             // Update reference implementation DECK after loading new level
             updateDeckFromHSK();
+            // Save progress when manually changing deck (start from character 0)
+            await saveProgress(selectedValue, 0);
         }
 	});	//.change(); // 觸發一次 change 事件以載入第一個列表
 
 	// 設定編輯中的字符
-	function setGlyph(index) {
+	async function setGlyph(index) {
 		if (!nowList) {
 			return;
 		}
@@ -452,7 +475,7 @@ $(document).ready(async function () {
 		nowGlyphIndex = index;
 		nowGlyph = nowList[index]; // 取得當前字符的名稱
 		
-	
+
 		// Show pinyin instead of glyph name in the blue rounded box
         let pinyin = '';
         if (window.CHARACTER_DECKS) {
@@ -489,10 +512,19 @@ $(document).ready(async function () {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		loadCanvasData(nowGlyph);
 		
+		// Update the outline if it's currently being shown
+		if (showHint) {
+			initCanvas(canvas);
+		}
+		
 		// 重置筆壓檢測狀態
 		if (settings.oldPressureMode) {
 			pressureDrawing.resetPressureDetection();
 		}
+		
+		// 儲存學習進度
+		const currentDeck = $('#listSelect').val() || 'HSK 1';
+		await saveProgress(currentDeck, nowGlyphIndex);
 	}
 
 	var svgTimers = {}; // 用於控制 SVG 儲存的定時器
@@ -540,8 +572,8 @@ $(document).ready(async function () {
 		}
 	}
 
-	$('#prevButton').on('click', function () { setGlyph(nowGlyphIndex - 1); }); // 切換到上一個字符
-	$('#nextButton').on('click', function () { setGlyph(nowGlyphIndex + 1); }); // 切換到下一個字符
+	$('#prevButton').on('click', async function () { await setGlyph(nowGlyphIndex - 1); }); // 切換到上一個字符
+	$('#nextButton').on('click', async function () { await setGlyph(nowGlyphIndex + 1); }); // 切換到下一個字符
 
 
 
@@ -824,20 +856,27 @@ $(document).ready(async function () {
 	// 支援鍵盤方向鍵操作
 	$(document).on('keydown', function (event) {
 		switch (event.key) {
-			case 'ArrowLeft': // 左方向鍵
-				moveGlyph(-10, 0);
+			case 'ArrowLeft': // 左方向鍵 - 上一個字符
+				$('#prevButton').trigger('click');
 				break;
-			case 'ArrowRight': // 右方向鍵
-				moveGlyph(10, 0);
+			case 'ArrowRight': // 右方向鍵 - 下一個字符
+				$('#nextButton').trigger('click');
 				break;
-			case 'ArrowUp': // 上方向鍵
-				moveGlyph(0, -10);
+			case 'ArrowUp': // 上方向鍵 - 上一個字符
+				$('#prevButton').trigger('click');
 				break;
-			case 'ArrowDown': // 下方向鍵
-				moveGlyph(0, 10);
+			case 'ArrowDown': // 下方向鍵 - 下一個字符
+				$('#nextButton').trigger('click');
 				break;
 			case 'z': // Z 鍵 - 復原
-				$('#undoButton').trigger('click');
+				if (event.metaKey || event.ctrlKey) {
+					// Cmd+Z (Mac) or Ctrl+Z (Windows/Linux) - 復原
+					event.preventDefault();
+					$('#undoButton').trigger('click');
+				} else {
+					// Just Z key - 復原
+					$('#undoButton').trigger('click');
+				}
 				break;
 			case 'v': // V 鍵 - 畫筆
 				$('#penButton').trigger('click');
@@ -1167,7 +1206,7 @@ $(document).ready(async function () {
     }
 
     // Reference implementation: setEntry (equivalent to setGlyph)
-    function setEntry(i) {
+    async function setEntry(i) {
         if (!DECK || DECK.length === 0) {
             return;
         }
@@ -1187,7 +1226,7 @@ $(document).ready(async function () {
         nowGlyph = gname;
 
         // Update UI using original setGlyph logic
-        setGlyph(current);
+        await setGlyph(current);
     }
 
     // Update DECK when HSK data loads
@@ -1210,11 +1249,11 @@ $(document).ready(async function () {
         }
     });
 
-    charGrid.addEventListener('click', (e) => {
+    charGrid.addEventListener('click', async (e) => {
         const target = e.target.closest('.char-grid-item');
         if (target && target.dataset.index) {
             const charIndex = parseInt(target.dataset.index, 10);
-            setEntry(charIndex);
+            await setEntry(charIndex);
             closeModal();
         }
     });
@@ -1232,10 +1271,10 @@ $(document).ready(async function () {
 	});
 
     // Shuffle
-    $('#btnShuffle').on('click', function() {
+    $('#btnShuffle').on('click', async function() {
         if (nowList) {
             shuffleArray(nowList);
-            setGlyph(0);
+            await setGlyph(0);
         }
     });
 

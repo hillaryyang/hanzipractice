@@ -29,15 +29,16 @@
 }
 
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{height:100%; overflow-x:hidden}
 body{
   margin:0;
   font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
   background:var(--bg);
   color:var(--text);
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
-.app{display:flex; gap:0; padding:20px; min-height:100vh; position:relative}
+.app{display:flex; gap:0; padding:20px; min-height:calc(100vh - 40px); position:relative; overflow-x:auto}
 aside{
   width:560px; 
   min-width:320px; 
@@ -92,7 +93,7 @@ aside{
   display: block;
   transform: rotate(90deg);
 }
-.char-head{display:flex; align-items:center; gap:12px}
+.char-head{display:flex; align-items:center; gap:12px; margin-top:8px; padding-top:8px}
 .big-char{
   font-family:"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", STHeiti, system-ui, sans-serif;
   font-size:56px;
@@ -203,7 +204,9 @@ main{
   border:1px solid var(--grid);
   background:var(--bg);
   margin:0 auto 20px auto;
+  transition: all 0.3s ease;
 }
+
 
 /* tianzige background - 4 quadrants */
 .grid-bg{
@@ -254,6 +257,7 @@ main{
   position: sticky;
   top: 0;
   z-index: 100;
+  margin-bottom: 0;
 }
 
 .header-content{
@@ -422,17 +426,181 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
   color:var(--text)
 }
 
-@media (max-width: 980px){
-  .app{flex-direction:column}
-  aside{width:auto}
-  main{padding:16px}
-  .board-wrap{
-    width:min(400px, 100vw - 40px);
-    height:min(400px, 100vw - 40px);
+/* iPad and larger tablets in landscape */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .app {
+    padding: 16px;
+    gap: 16px;
   }
-  .toolbar{
-    flex-wrap:wrap;
-    gap:10px;
+  
+  aside {
+    width: 400px;
+    min-width: 350px;
+  }
+  
+  .board-wrap {
+    width: 500px;
+    height: 500px;
+  }
+  
+  .toolbar button {
+    padding: 14px 18px;
+    font-size: 16px;
+    min-height: 44px; /* Apple's recommended touch target size */
+  }
+  
+  .char-head .big-char {
+    font-size: 64px;
+    width: 90px;
+    height: 90px;
+  }
+  
+  .btn-row button {
+    padding: 18px 22px;
+    font-size: 18px;
+    min-height: 44px;
+  }
+}
+
+/* iPad and larger tablets in portrait */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+  .app {
+    flex-direction: column;
+    padding: 20px;
+    gap: 20px;
+    min-height: auto;
+    overflow-y: auto;
+  }
+  
+  body {
+    overflow-y: auto;
+  }
+  
+  aside {
+    width: auto;
+    max-width: none;
+  }
+  
+  .board-wrap {
+    width: min(600px, 90vw);
+    height: min(600px, 90vw);
+    margin: 0 auto 20px auto;
+  }
+  
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 20px;
+  }
+  
+  .toolbar button {
+    padding: 16px 20px;
+    font-size: 18px;
+    min-height: 48px;
+    min-width: 120px;
+  }
+  
+  .char-head {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .char-head .big-char {
+    font-size: 72px;
+    width: 100px;
+    height: 100px;
+  }
+  
+  .btn-row {
+    justify-content: center;
+  }
+  
+  .btn-row button {
+    padding: 20px 24px;
+    font-size: 20px;
+    min-height: 48px;
+  }
+  
+  #slider-container {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  #brushSelector img {
+    width: 44px;
+    height: 44px;
+    padding: 6px;
+  }
+  
+  #lineWidthSlider {
+    height: 12px;
+    min-width: 120px;
+  }
+  
+  #lineWidthSlider::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  #lineWidthSlider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Mobile phones and small tablets */
+@media (max-width: 767px) {
+  .app {
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+    min-height: auto;
+    overflow-y: auto;
+  }
+  
+  body {
+    overflow-y: auto;
+  }
+  
+  aside {
+    width: auto;
+  }
+  
+  main {
+    padding: 12px;
+  }
+  
+  .board-wrap {
+    width: min(400px, 100vw - 24px);
+    height: min(400px, 100vw - 24px);
+  }
+  
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .toolbar button {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  
+  .char-head {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+  
+  .char-head .big-char {
+    font-size: 48px;
+    width: 70px;
+    height: 70px;
+  }
+  
+  .btn-row button {
+    padding: 14px 18px;
+    font-size: 16px;
+    min-height: 44px;
   }
 }
 
@@ -649,7 +817,81 @@ body, aside {
 
 /* Safari/iPad Pencil hygiene */
 canvas { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
-html, body { touch-action: none; } /* we already disable on canvas; this helps around edges */
+/* Allow scrolling on body, but disable touch-action only on canvas */
+html { touch-action: manipulation; }
+body { touch-action: manipulation; }
+
+/* iPad-specific enhancements */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Improve modal sizing for iPad */
+  .modal-content {
+    width: 85%;
+    max-width: 700px;
+    height: 75%;
+    max-height: 500px;
+  }
+  
+  .char-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 12px;
+  }
+  
+  .char-grid-item {
+    font-size: 1.8rem;
+    min-height: 70px;
+  }
+  
+  /* Better header for iPad */
+  .global-header {
+    padding: 24px;
+  }
+  
+  .app-title {
+    font-size: 42px;
+  }
+  
+  .deck-selector {
+    padding: 12px 18px;
+    font-size: 18px;
+    min-width: 160px;
+  }
+  
+  .theme-toggle {
+    padding: 12px;
+  }
+  
+  .theme-toggle svg {
+    width: 24px;
+    height: 24px;
+  }
+  
+  /* Improve resize handle for touch */
+  .resize-handle {
+    width: 24px;
+  }
+  
+  .resize-arrow {
+    padding: 12px 6px;
+  }
+  
+  /* Better stat display */
+  .stat {
+    padding: 20px;
+  }
+  
+  .stat .label {
+    font-size: 16px;
+  }
+  
+  .stat .value {
+    font-size: 26px;
+  }
+  
+  .pinyin {
+    padding: 10px 16px;
+    font-size: 18px;
+  }
+}
 
 /* =========================================
    Character Grid Modal Styles
