@@ -58,12 +58,23 @@
       </div>
 
       <div id="slider-container">
-		<div id="brushSelector"></div><div id="pressureButton" class="off"></div>
-		<input id="lineWidthSlider" type="range" min="2" max="36" value="12" />
-		<label for="lineWidthSlider"><span id="lineWidthValue">12</span></label>
+		<div id="brushSelector"></div>
+		<div class="slider-group">
+			<input id="lineWidthSlider" type="range" min="2" max="36" value="12" />
+			<label for="lineWidthSlider"><span id="lineWidthValue">12</span></label>
+		</div>
 	  </div>
 
     </aside>
+
+    <div class="resize-handle" id="resizeHandle">
+      <div class="resize-arrow">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 18l4-4 4 4"/>
+          <path d="M8 6l4 4 4-4"/>
+        </svg>
+      </div>
+    </div>
 
     <main>
       <div class="board-wrap" id="canvas-container">
@@ -263,6 +274,40 @@
             // Refresh canvas to apply new theme colors
             if (typeof initCanvas !== 'undefined' && document.getElementById('drawingCanvas')) {
                 initCanvas(document.getElementById('drawingCanvas'));
+            }
+        });
+
+        // Resize handle functionality
+        const resizeHandle = document.getElementById('resizeHandle');
+        const aside = document.querySelector('aside');
+        let isResizing = false;
+
+        resizeHandle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            
+            const rect = aside.getBoundingClientRect();
+            const newWidth = e.clientX - rect.left;
+            
+            // Constrain width within min/max bounds
+            const minWidth = 320;
+            const maxWidth = 800;
+            const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            
+            aside.style.width = constrainedWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
             }
         });
     </script>

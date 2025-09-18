@@ -677,7 +677,7 @@ $(document).ready(async function () {
             event.preventDefault();
 
 		} else {			// 筆刷模式
-			var lw = settings.lineWidth * pressureVal * 2; // 計算線寬
+			var lw = settings.lineWidth; // 固定線寬
 			//if (event.type.includes('pointer'))
 			//drawBrush(ctx, brushes[settings.brushType], x*ratio, y*ratio, lw);
 
@@ -714,7 +714,7 @@ $(document).ready(async function () {
 		} else {
             
 
-			var lw = settings.lineWidth * pressureVal * 2;
+			var lw = settings.lineWidth; // 固定線寬
 
 			var d = Math.max(Math.abs(lastX - x), Math.abs(lastY - y)) * 1.5;
 			if (d > 40) events.push(`Long-DrawImage / ${pressureVal} / ${event.originalEvent.pointerType} / ${x}, ${y}, ${lw} (${lastX}, ${lastY}, ${lastLW}) ${d}`); // 儲存事件資訊

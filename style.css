@@ -37,34 +37,88 @@ body{
   color:var(--text);
 }
 
-.app{display:flex; gap:20px; padding:20px; min-height:100vh}
-aside{width:360px; background:var(--panel); border-radius:16px; padding:16px 16px; display:flex; flex-direction:column; gap:16px}
+.app{display:flex; gap:0; padding:20px; min-height:100vh; position:relative}
+aside{
+  width:560px; 
+  min-width:320px; 
+  max-width:800px; 
+  background:var(--panel); 
+  border-radius:20px; 
+  padding:24px 24px; 
+  display:flex; 
+  flex-direction:column; 
+  gap:20px;
+  transition: width 0.1s ease;
+}
+
+/* Resize Handle */
+.resize-handle {
+  width: 20px;
+  background: transparent;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 10;
+  transition: all 0.2s ease;
+  align-self: stretch;
+}
+
+.resize-handle:hover {
+  background: rgba(103, 232, 249, 0.1);
+}
+
+.resize-arrow {
+  background: var(--panel);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  padding: 8px 4px;
+  color: var(--muted);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 50vh;
+}
+
+.resize-handle:hover .resize-arrow {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  transform: scale(1.1);
+}
+
+.resize-arrow svg {
+  display: block;
+  transform: rotate(90deg);
+}
 .char-head{display:flex; align-items:center; gap:12px}
 .big-char{
   font-family:"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", STHeiti, system-ui, sans-serif;
-  font-size:44px;
+  font-size:56px;
   line-height:1;
   background:var(--btn);
   border:1px solid var(--grid);
-  border-radius:12px;
-  width:64px;
-  height:64px;
+  border-radius:16px;
+  width:80px;
+  height:80px;
   display:grid;
   place-items:center
 }
 .pinyin{
   background:var(--btn);
   border:1px solid var(--grid);
-  padding:6px 10px;
+  padding:8px 14px;
   border-radius:999px;
+  font-size:16px;
   font-weight:600;
   color:var(--accent)
 }
 
 .stat-grid{display:grid; grid-template-columns:1fr; gap:12px}
-.stat{background:var(--btn); border:1px solid var(--grid); border-radius:12px; padding:12px}
-.stat .label{font-size:12px; color:var(--muted); letter-spacing:.02em}
-.stat .value{font-weight:700; font-size:18px; margin-top:4px}
+.stat{background:var(--btn); border:1px solid var(--grid); border-radius:16px; padding:16px}
+.stat .label{font-size:14px; color:var(--muted); letter-spacing:.02em}
+.stat .value{font-weight:700; font-size:22px; margin-top:4px}
 .btn-row{
     display: flex; 
     gap: 12px;
@@ -88,9 +142,9 @@ button:hover{border-color:var(--grid-strong)}
 button.primary{background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:var(--bg); border:none}
 button.ghost{
     background: var(--btn); 
-    font-size: 15px; 
-    padding: 12px 16px;
-    border-radius: 12px;
+    font-size: 18px; 
+    padding: 16px 20px;
+    border-radius: 16px;
     font-weight: 600;
     transition: all 0.2s ease;
     border: 1px solid var(--grid);
@@ -98,7 +152,7 @@ button.ghost{
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 button.ghost:hover {
@@ -136,6 +190,8 @@ main{
   align-items:center;
   justify-content:center;
   min-height:500px;
+  margin-left:20px;
+  min-width:400px;
 }
 
 .board-wrap{
@@ -194,7 +250,7 @@ main{
 .global-header{
   background: var(--panel);
   border-bottom: 1px solid var(--grid);
-  padding: 16px 20px;
+  padding: 20px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -204,21 +260,24 @@ main{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
+  width: 100%;
 }
 
 .header-left{
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
+  flex: 1;
 }
 
 .app-title{
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 36px;
+  font-weight: 900;
   margin: 0;
   color: var(--text);
+  letter-spacing: -0.5px;
 }
 
 .header-info{
@@ -288,11 +347,12 @@ main{
   background: var(--btn);
   border: 1px solid var(--grid);
   color: var(--text);
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
+  min-width: 140px;
 }
 
 .deck-selector:focus{
@@ -310,17 +370,45 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
 
 .toolbar{
   display:flex;
-  gap:15px;
+  gap:12px;
   align-items:center;
   justify-content:center;
-  width:100%;
-  max-width:400px;
-  margin-top:15px;
-  padding:0 10px;
+  width:fit-content;
+  margin-top:20px;
+  padding:16px;
+  background:var(--panel);
+  border:1px solid var(--grid);
+  border-radius:16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.left-tools, .right-tools{display:flex; gap:10px; align-items:center}
-.right-tools button{min-width:80px}
+.left-tools, .right-tools{display:flex; gap:12px; align-items:center}
+
+.toolbar button{
+  background: var(--btn);
+  border: 1px solid var(--grid);
+  color: var(--text);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.toolbar button:hover {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 .status{font-weight:700}
 
 .hint-pill{font-size:12px; color:var(--muted)}
@@ -353,17 +441,19 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
 #slider-container {
     background: var(--panel);
     border: 1px solid var(--grid);
-    border-radius: 12px;
-    padding: 8px;
+    border-radius: 16px;
+    padding: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     margin: 8px 0;
-    width: fit-content;
+    width: 100%;
+    max-width: 100%;
 }
 
 #slider-container:hover {
@@ -373,13 +463,21 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
 
 #brushSelector {
     display: flex;
-    gap: 4px;
+    gap: 3px;
     background: var(--panel);
     border: 1px solid var(--grid);
     border-radius: 8px;
-    padding: 4px;
+    padding: 3px;
     transition: all 0.3s ease;
-    max-width: fit-content;
+    flex-shrink: 0;
+}
+
+.slider-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 140px;
 }
 
 #brushSelector:hover {
@@ -388,12 +486,12 @@ canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none}
 }
 
 #brushSelector img {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     cursor: pointer;
     border: 2px solid transparent;
-    border-radius: 8px;
-    padding: 2px;
+    border-radius: 10px;
+    padding: 4px;
     background: transparent;
     transition: all 0.2s ease;
     position: relative;
@@ -456,9 +554,11 @@ body:not([data-theme="light"]) #brushSelector img:hover {
 
 /* Size Slider Styling */
 #lineWidthSlider {
-    width: 120px;
-    height: 6px;
-    border-radius: 3px;
+    width: 100%;
+    min-width: 80px;
+    flex: 1;
+    height: 10px;
+    border-radius: 5px;
     background: var(--grid);
     outline: none;
     -webkit-appearance: none;
@@ -474,8 +574,8 @@ body:not([data-theme="light"]) #brushSelector img:hover {
 #lineWidthSlider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: var(--accent);
     cursor: pointer;
@@ -490,8 +590,8 @@ body:not([data-theme="light"]) #brushSelector img:hover {
 }
 
 #lineWidthSlider::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: var(--accent);
     cursor: pointer;
